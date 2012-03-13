@@ -84,6 +84,7 @@ int do_migrate(Monitor *mon, const QDict *qdict, QObject **ret_data)
     int blk = qdict_get_try_bool(qdict, "blk", 0);
     int inc = qdict_get_try_bool(qdict, "inc", 0);
     const char *uri = qdict_get_str(qdict, "uri");
+    const char *config_file = qdict_get_str(qdict, "config");
 
     if (current_migration &&
         current_migration->get_status(current_migration) == MIG_STATE_ACTIVE) {
@@ -96,8 +97,9 @@ int do_migrate(Monitor *mon, const QDict *qdict, QObject **ret_data)
     }
 
     if (strstart(uri, "tcp:", &p)) {
+        //classicsong
         s = tcp_start_outgoing_migration(mon, p, max_throttle, detach,
-                                         blk, inc);
+                                         blk, inc, config_file);
 #if !defined(WIN32)
     } else if (strstart(uri, "exec:", &p)) {
         s = exec_start_outgoing_migration(mon, p, max_throttle, detach,
@@ -352,8 +354,8 @@ void migrate_fd_connect(FdMigrationState *s)
                                       migrate_fd_close);
 
     DPRINTF("beginning savevm\n");
-    ret = qemu_savevm_state_begin(s->mon, s->file, s->mig_state.blk,
-                                  s->mig_state.shared);
+    ret = qemu_migrate_savevm_state_begin(s, s->mon, s->file, s->mig_state.blk,
+                                          s->mig_state.shared);
     if (ret < 0) {
         DPRINTF("failed, %d\n", ret);
         migrate_fd_error(s);

@@ -1457,6 +1457,77 @@ bool qemu_savevm_state_blocked(Monitor *mon)
     return false;
 }
 
+int qemu_migrate_savevm_state_begin(FdMigrationState *s, Monitor *mon, QEMUFile *f, 
+                                    int blk_enable, int shared)
+{
+    SaveStateEntry *se;
+
+    QTAILQ_FOREACH(se, &savevm_handlers, entry) {
+        if(se->set_params == NULL) {
+            continue;
+	}
+	se->set_params(blk_enable, shared, se->opaque);
+    }
+    
+    qemu_put_be32(f, QEMU_VM_FILE_MAGIC);
+    qemu_put_be32(f, QEMU_VM_FILE_VERSION);
+
+    /*
+     * classicsong
+     * negotiate parallel migration
+     * create slaves
+     */
+    ret = qemu_savevm_state_negotiate(s, s->file);
+    if (ret < 0) {
+        DPRINTK("Negotiate failed, %d\n", ret);
+        migrate_fd_error(s);
+        return;
+    }
+
+    /*
+     * judge whether to start memory migration immediately
+     * need memory info and disk info
+     * default is to start
+     */
+    if (0)
+        s->migrate_memory = HOLD_MEMORY_MIGRATION;
+    s->migrate_memory = START_MEMORY_MIGRATION;
+
+    /*
+     * initiate slave threads
+     */
+    if (s->para_config != NULL)
+        init_host_slaves(s);
+
+    QTAILQ_FOREACH(se, &savevm_handlers, entry) {
+        int len;
+
+        if (se->save_live_state == NULL)
+            continue;
+
+        /* Section type */
+        qemu_put_byte(f, QEMU_VM_SECTION_START);
+        qemu_put_be32(f, se->section_id);
+
+        /* ID string */
+        len = strlen(se->idstr);
+        qemu_put_byte(f, len);
+        qemu_put_buffer(f, (uint8_t *)se->idstr, len);
+
+        qemu_put_be32(f, se->instance_id);
+        qemu_put_be32(f, se->version_id);
+
+        se->save_live_state(mon, f, QEMU_VM_SECTION_START, se->opaque);
+    }
+
+    if (qemu_file_has_error(f)) {
+        qemu_savevm_state_cancel(mon, f);
+        return -EIO;
+    }
+
+    return 0;
+}
+
 int qemu_savevm_state_begin(Monitor *mon, QEMUFile *f, int blk_enable,
                             int shared)
 {

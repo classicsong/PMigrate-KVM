@@ -18,6 +18,10 @@
 #include "qemu-common.h"
 #include "notify.h"
 
+//classicsong
+#include "para-config.h"
+#include "migr_task.h"
+
 #define MIG_STATE_ERROR		-1
 #define MIG_STATE_COMPLETED	0
 #define MIG_STATE_CANCELLED	1
@@ -37,6 +41,9 @@ struct MigrationState
 
 typedef struct FdMigrationState FdMigrationState;
 
+#define START_MEMORY_MIGRATION 1
+#define HOLD_MEMORY_MIGRATION 0
+
 struct FdMigrationState
 {
     MigrationState mig_state;
@@ -49,7 +56,29 @@ struct FdMigrationState
     int (*close)(struct FdMigrationState*);
     int (*write)(struct FdMigrationState*, const void *, size_t);
     void *opaque;
+    struct parallel_param *para_config;
+    struct migration_task_queue *task_queue;
+    struct migration_slave *slave_list;
+    int migrate_memory;    //indicate whether start migrating memory
 };
+
+struct FdMigrationSlaveState
+{
+    MigrationState mig_state;
+    int64_t bandwidth_limit;
+    QEMUFile *file;
+    int fd;
+    Monitor *mon;
+    int state;
+    int (*get_error)(struct FdMigrationState*);
+    int (*close)(struct FdMigrationState*);
+    int (*write)(struct FdMigrationState*, const void *, size_t);
+    void *opaque;
+    SSL_func;
+    char *host_ip;
+    char *dest_ip;
+    struct migration_task *task_queue;
+}
 
 void process_incoming_migration(QEMUFile *f);
 
@@ -83,10 +112,11 @@ int tcp_start_incoming_migration(const char *host_port);
 
 MigrationState *tcp_start_outgoing_migration(Monitor *mon,
                                              const char *host_port,
-					     int64_t bandwidth_limit,
-					     int detach,
-					     int blk,
-					     int inc);
+                                             int64_t bandwidth_limit,
+                                             int detach,
+                                             int blk,
+                                             int inc,
+                                             const char *config_file);
 
 int unix_start_incoming_migration(const char *path);
 

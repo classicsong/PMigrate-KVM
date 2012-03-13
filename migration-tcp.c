@@ -76,12 +76,14 @@ static void tcp_wait_for_connect(void *opaque)
     }
 }
 
+//classicsong
 MigrationState *tcp_start_outgoing_migration(Monitor *mon,
                                              const char *host_port,
                                              int64_t bandwidth_limit,
                                              int detach,
-					     int blk,
-					     int inc)
+                                             int blk,
+                                             int inc,
+                                             const char *config_file)
 {
     struct sockaddr_in addr;
     FdMigrationState *s;
@@ -105,6 +107,13 @@ MigrationState *tcp_start_outgoing_migration(Monitor *mon,
     s->state = MIG_STATE_ACTIVE;
     s->mon = NULL;
     s->bandwidth_limit = bandwidth_limit;
+
+    /*
+     * classicsong
+     * parse config_file
+     */
+    parse_migration_config_file(s, config_file, host_port);
+
     s->fd = qemu_socket(PF_INET, SOCK_STREAM, 0);
     if (s->fd == -1) {
         qemu_free(s);
