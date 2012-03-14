@@ -291,6 +291,13 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
             qemu_put_buffer(f, (uint8_t *)block->idstr, strlen(block->idstr));
             qemu_put_be64(f, block->length);
         }
+
+        /*
+         * classicsong
+         * step 1 only init the memory in the dest
+         */
+        qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
+        return 0;
     }
 
     bytes_transferred_last = bytes_transferred;
@@ -367,6 +374,8 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
 {
     ram_addr_t addr;
     int flags;
+    struct task_body *task = NULL;
+    int num_pages;
 
     if (version_id < 3 || version_id > 4) {
         return -EINVAL;
@@ -415,6 +424,13 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                     total_ram_bytes -= length;
                 }
             }
+
+            /*
+             * classicsong
+             * the memory patch is applied by slaves it self
+             * So after receive block info, the host will send RAM_SAVE_FLAG_EOS to let dest 
+             * to terminate the load_ram call.
+             */
         }
 
         if (flags & RAM_SAVE_FLAG_COMPRESS) {
@@ -430,6 +446,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             }
 
             ch = qemu_get_byte(f);
+
             memset(host, ch, TARGET_PAGE_SIZE);
 #ifndef _WIN32
             if (ch == 0 &&
@@ -451,6 +468,10 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             return -EIO;
         }
     } while (!(flags & RAM_SAVE_FLAG_EOS));
+
+    /*
+     * need barrier for iterations
+     */
 
     return 0;
 }

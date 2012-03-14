@@ -1479,7 +1479,7 @@ int qemu_migrate_savevm_state_begin(FdMigrationState *s, Monitor *mon, QEMUFile 
      */
     ret = qemu_savevm_state_negotiate(s, s->file);
     if (ret < 0) {
-        DPRINTK("Negotiate failed, %d\n", ret);
+        fprintf(stderr, "Negotiate failed, %d\n", ret);
         migrate_fd_error(s);
         return;
     }
@@ -1493,6 +1493,13 @@ int qemu_migrate_savevm_state_begin(FdMigrationState *s, Monitor *mon, QEMUFile 
         s->migrate_memory = HOLD_MEMORY_MIGRATION;
     s->migrate_memory = START_MEMORY_MIGRATION;
 
+    /*
+     * create task queue
+     */
+    s->task_queue = new_task_queue();
+
+    s->master_list = NULL;
+    s->slave_list = NULL;
     /*
      * initiate slave threads
      */
@@ -1518,6 +1525,12 @@ int qemu_migrate_savevm_state_begin(FdMigrationState *s, Monitor *mon, QEMUFile 
         qemu_put_be32(f, se->version_id);
 
         se->save_live_state(mon, f, QEMU_VM_SECTION_START, se->opaque);
+
+        if (se->save_live_state == ram_save_live)
+            create_host_memory_master(s);
+
+        if (se->save_live_state == ram_save_block)
+            create_host_disk_master(s);
     }
 
     if (qemu_file_has_error(f)) {
@@ -1792,6 +1805,8 @@ typedef struct LoadStateEntry {
     int version_id;
 } LoadStateEntry;
 
+struct FdMigrationDestState *dest_state;
+
 int qemu_loadvm_state(QEMUFile *f)
 {
     QLIST_HEAD(, LoadStateEntry) loadvm_handlers =
@@ -1800,6 +1815,7 @@ int qemu_loadvm_state(QEMUFile *f)
     uint8_t section_type;
     unsigned int v;
     int ret;
+    struct migration_task_queue *task_queue;
 
     if (qemu_savevm_state_blocked(default_mon)) {
         return -EINVAL;
@@ -1816,6 +1832,10 @@ int qemu_loadvm_state(QEMUFile *f)
     }
     if (v != QEMU_VM_FILE_VERSION)
         return -ENOTSUP;
+
+    dest_state = (struct FdMigrationDestState *)malloc(sizeof(struct FdMigrationDestState));
+    dest_state->slave_list = NULL;
+    dest_state->task_queue = new_task_queue();
 
     while ((section_type = qemu_get_byte(f)) != QEMU_VM_EOF) {
         uint32_t instance_id, version_id, section_id;
@@ -1885,6 +1905,31 @@ int qemu_loadvm_state(QEMUFile *f)
                 fprintf(stderr, "qemu: warning: error while loading state section id %d\n",
                         section_id);
                 goto out;
+            }
+            break;
+            /*
+             * classicsong
+             * negotiation here
+             */
+        case QEMU_VM_SECTION_NEGOTIATE:
+            int num_ips, ssl_type, i;
+            char ip_buf[32];               //32 bytes is enough for dest_ip:port
+            num_ips = qemu_get_be32(f);
+            ssl_type = qemu_get_be32(f);
+
+            /*
+             * creating dest slaves
+             */
+            for (i = 0; i < num_ips; i++) {
+                pthread_t tid;
+                int len = qemu_get_be32(f);
+
+                qemu_get_buffer(f, ip_buf, len);
+                tid = create_dest_slave(ip_buf, ssl_type);
+                struct migration_slave *slave = (struct migration_slave *)malloc(sizeof(struct migration_slave));
+                slave->tid = tid;
+                slave->next = slave_list;
+                slave_list= slave;
             }
             break;
         default:

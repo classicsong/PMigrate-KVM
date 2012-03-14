@@ -44,6 +44,22 @@ typedef struct FdMigrationState FdMigrationState;
 #define START_MEMORY_MIGRATION 1
 #define HOLD_MEMORY_MIGRATION 0
 
+struct migration_slave
+{
+    struct migration_slave *next;
+    pthread_t tid;
+};
+
+#define MEMORY_MASTER 1
+#define DISK_MASTER 2
+
+struct migration_master
+{
+    struct migration_master *next;
+    int type;
+    pthread_t tid;
+};
+
 struct FdMigrationState
 {
     MigrationState mig_state;
@@ -59,8 +75,15 @@ struct FdMigrationState
     struct parallel_param *para_config;
     struct migration_task_queue *task_queue;
     struct migration_slave *slave_list;
+    struct migration_master *master_list;
     int migrate_memory;    //indicate whether start migrating memory
 };
+
+struct FdMigrationDestState
+{
+    struct migration_slave *slave_list;
+    struct migration_task_queue *task_queue;
+}
 
 struct FdMigrationSlaveState
 {

@@ -7,8 +7,18 @@
 #include <stdio.h>
 #include <pthread.h>
 
+#define TASK_TYPE_MEM 0
+#define TASK_TYPE_DISK 1
+
+#define DEFAULT_MEM_BATCH_SIZE 2 * 1024 * 1024 //2M
+#define DEFAULT_DISK_BATCH_SIZE 2 * 1024 * 1024 //2M
+
 struct task_body {
     int type;
+    union {
+        char *pages;
+        char *blocks;
+    };
     //...
 };
 
@@ -53,9 +63,12 @@ struct migration_slave{
     int slave_id;
 };
 
-void queue_init(struct migration_task_queue *task_queue) {
+struct migration_task_queue *new_task_queue(void) {
+    struct migration_task_queue *task_queue = (struct migration_task_queue *)malloc(sizeof(struct migration_task_queue));
     INIT_LIST_HEAD(&(task_queue->list_head));
     pthread_mutex_init(&(task_queue->task_lock), NULL);
+
+    return task_queue;
 }
 
 int queue_pop_task(struct migration_task_queue *task_queue, struct task_body **arg) {

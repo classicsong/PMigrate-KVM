@@ -1,6 +1,6 @@
 /*
- *  * host_port: the target connection ip:port
- *   */
+ * host_port: the target connection ip:port
+ */
 FdMigrationStateSlave *tcp_start_outgoing_migration_slave(Monitor *mon,
                                                           char *host_ip,
                                                           char *dest_ip,
@@ -51,8 +51,8 @@ void start_host_slave(void *data) {
                                       migrate_fd_close_slave);
 
     /*
-     *      * wait for following commands
-     *           */
+     * wait for following commands
+     */
 }
 
 void init_host_slaves(struct FdMigrationState *s) {
@@ -60,6 +60,8 @@ void init_host_slaves(struct FdMigrationState *s) {
 
     for (i = 0; i < s->para_config->num_slave; i ++) {
         FdMigrationStateSlave *slave_s;
+        pthread_t tid;
+        struct migration_slave *slave = (struct migration_slave *)malloc(sizeof(struct migration_slave));
         char *host_ip = s->para_config->host_ip_list[i];
         char *dest_ip = s->para_config->dest_ip_list[i];
         int ssl_type = s->para_config->SSL_type;
@@ -67,7 +69,10 @@ void init_host_slaves(struct FdMigrationState *s) {
                                                      dest_ip, s->bandwidth_limit,
                                                      detach, ssl_type);
 
-        pthread_create(start_host_slave, slave_s);
+        pthread_create(&tid, NULL, start_host_slave, slave_s);
+        slave->tid = tid;
+        slave->next = s->slave_list;
+        s->slave_list = slave;
     }
 }
 
@@ -75,6 +80,12 @@ struct dest_slave_para{
     char *listen_ip;
     int ssl_type;
 };
+
+int slave_loadvm_state() {
+    /*
+     * receive memory and disk data
+     */
+}
 
 void start_dest_slave(void *data) {
     struct dest_slave_para * para = (struct dest_slave_para *)data;
@@ -84,8 +95,8 @@ void start_dest_slave(void *data) {
     int fd;
     int con_fd;
     /*
-     *      * create connection
-     *           */
+     * create connection
+     */
     fd = socket(PF_INET, SOCK_STREAM, 0);
     if (s == -1)
         return -socket_error();
@@ -101,14 +112,17 @@ void start_dest_slave(void *data) {
     } while (con_fd == -1 && socket_error() == EINTR);
 
     /*
-     *      * wait for further commands
-     *           */
+     * wait for further commands
+     */
 }
 
 pthread_t create_dest_slave(char *listen_ip, int ssl_type) {
     struct dest_slave_para *data;
+    pthread_t tid;
     data->listen_ip = listen_ip;
     data->ssl_type = ssl_type;
-    pthread_create(start_dest_slave, data);
+    pthread_create(&tid, NULL, start_dest_slave, data);
+
+    return tid;
 }
 
