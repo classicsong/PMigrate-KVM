@@ -20,6 +20,10 @@
 
 //#define DEBUG_BUFFERED_FILE
 
+//classicsong
+#include <assert.h>
+
+//classicsong add budget for this buffer
 typedef struct QEMUFileBuffered
 {
     BufferedPutFunc *put_buffer;
@@ -36,7 +40,18 @@ typedef struct QEMUFileBuffered
     size_t buffer_size;
     size_t buffer_capacity;
     QEMUTimer *timer;
+    /*
+     * budget data
+     */
+    int budget;
+    int burst_time_us;
+    struct timeval last_put;
 } QEMUFileBuffered;
+
+/* scaling factor to convert between MB/s and time in usecs, copy from xen*/
+#define RATE_TO_BTU 781250
+/* Amount in bytes we allow ourselves to send in a burst */
+#define BURST_BUDGET (100 * 1024)
 
 #ifdef DEBUG_BUFFERED_FILE
 #define DPRINTF(fmt, ...) \
@@ -107,6 +122,113 @@ static void buffered_flush(QEMUFileBuffered *s)
     s->buffer_size -= offset;
 }
 
+/*
+ * classicsong
+ * need rate_control here
+ */
+static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t pos, int size)
+{
+    QEMUFileBuffered *s = opaque;
+    int offset = 0;
+    ssize_t ret;
+    struct timeval now;
+    struct timespec delay;
+    long long delta;
+
+    DPRINTF("slave putting %d bytes at %" PRId64 "\n", size, pos);
+
+    /*
+     * flush the old data out
+     */
+    if (s->has_error) {
+        DPRINTF("flush when error, bailing\n");
+        return -EINVAL;
+    }
+
+    DPRINTF("unfreezing output\n");
+    s->freeze_output = 0;
+
+    buffered_flush(s);
+
+    /*
+     * rate control here
+     */
+    s->budget -= size;
+
+    /*
+     * wait for budget here
+     */
+    if (s->budget < 0) {
+        s->burst_time_us = RATE_TO_BTU / s->xfer_limit;
+
+        if (s->last_put.tv_sec == 0) {
+            s->budget += BURST_BUDGET;
+            gettimeofday(&s->last_put, NULL);
+        }
+        else 
+        {
+            while (s->budget < 0) {
+                gettimeofday(&now, NULL);
+                delta = tv_delta(&now, &s->last_put);
+                while (delta > s->burst_time_us) {
+                    s->budget += BURST_BUDGET;
+                    last_put.tv_usec += burst_time_us;
+                    if (s->last_put.tv_usec > 1000000) {
+                        s->last_put.tv_usec -= 1000000;
+                        s->last_put.tv_sec++;
+                    }
+
+                    delta -= s->burst_time_us;
+                }
+                if (s->burst_budget > 0)
+                    break;
+
+                delay.tv_sec = 0;
+                delay.tv_nsec = 1000 * (s->burst_time_us - delta);
+                while ( delay.tv_nsec > 0)
+                    if (nanosleep(&delay, &delay) == 0)
+                        break;
+            }
+        }
+    }
+
+    /*
+     * we have budget now
+     * start writing data out
+     */
+    while (!s->freeze_output && offset < size) {
+        ret = s->put_buffer(s->opaque, buf + offset, size - offset);
+        if (ret == -EAGAIN) {
+            DPRINTF("backend not ready, freezing\n");
+            s->freeze_output = 1;
+            break;
+        }
+
+        if (ret <= 0) {
+            DPRINTF("error putting\n");
+            s->has_error = 1;
+            offset = -EINVAL;
+            break;
+        }
+
+        DPRINTF("put %zd byte(s)\n", ret);
+        offset += ret;
+    }
+
+    if (offset >= 0) {
+        DPRINTF("buffering %d bytes\n", size - offset);
+
+        /*
+         * all data should be sent in the above while
+         */
+        assert(size == offset);
+        buffered_append(s, buf + offset, size - offset);
+        offset = size;
+    }
+
+    return offset;
+}
+
 static int buffered_put_buffer(void *opaque, const uint8_t *buf, int64_t pos, int size)
 {
     QEMUFileBuffered *s = opaque;
@@ -165,6 +287,29 @@ static int buffered_put_buffer(void *opaque, const uint8_t *buf, int64_t pos, in
     }
 
     return offset;
+}
+
+//classicsong
+
+static int buffered_close_slave(void *opaque)
+{
+    QEMUFileBuffered *s = opaque;
+    int ret;
+
+    DPRINTF("closing\n");
+
+    while (!s->has_error && s->buffer_size) {
+        buffered_flush(s);
+        if (s->freeze_output)
+            s->wait_for_unfreeze(s);
+    }
+
+    ret = s->close(s->opaque);
+
+    qemu_free(s->buffer);
+    qemu_free(s);
+
+    return ret;
 }
 
 static int buffered_close(void *opaque)
@@ -249,6 +394,34 @@ static void buffered_rate_tick(void *opaque)
 
     /* Add some checks around this */
     s->put_ready(s->opaque);
+}
+
+QEMUFile *qemu_fopen_ops_buffered_slave(void *opaque,
+                                        size_t bytes_per_sec,
+                                        BufferedPutFunc *put_buffer,
+                                        BufferedPutReadyFunc *put_ready,
+                                        BufferedWaitForUnfreezeFunc *wait_for_unfreeze,
+                                        BufferedCloseFunc *close)
+{
+    QEMUFileBuffered *s;
+
+    s = qemu_mallocz(sizeof(*s));
+
+    s->opaque = opaque;
+    s->xfer_limit = bytes_per_sec;
+    s->put_buffer = put_buffer;
+    s->put_ready = put_ready;
+    s->wait_for_unfreeze = wait_for_unfreeze;
+    s->close = close;
+    s->budget = 0;
+    s->burst_time_us = -1;
+    s->last_put = 0;
+
+    s->file = qemu_fopen_ops(s, buffered_put_buffer_slave, NULL,
+                             buffered_close_slave, buffered_rate_limit,
+                             buffered_set_rate_limit,
+                             buffered_get_rate_limit);
+    return s->file;
 }
 
 QEMUFile *qemu_fopen_ops_buffered(void *opaque,

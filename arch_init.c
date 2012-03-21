@@ -246,7 +246,132 @@ static void sort_ram_list(void)
     qemu_free(blocks);
 }
 
-int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
+
+int
+ram_save_block_slave(uint8_t *p, int cont, struct FdMigrationStateSlave *s) {
+    QEMUFile *f = s->file;
+
+    if (is_dup_page(p, *p)) {
+        qemu_put_be64(f, offset | cont | RAM_SAVE_FLAG_COMPRESS);
+        if (!cont) {
+            qemu_put_byte(f, strlen(block->idstr));
+            qemu_put_buffer(f, (uint8_t *)block->idstr,
+                            strlen(block->idstr));
+        }
+        qemu_put_byte(f, *p);
+    } else {
+        qemu_put_be64(f, offset | cont | RAM_SAVE_FLAG_PAGE);
+        if (!cont) {
+            qemu_put_byte(f, strlen(block->idstr));
+            qemu_put_buffer(f, (uint8_t *)block->idstr,
+                            strlen(block->idstr));
+        }
+        qemu_put_buffer(f, p, TARGET_PAGE_SIZE);
+    }
+
+}
+
+static unsigned long
+ram_save_block_master(struct migration_task_queue *task_queue) {
+    RAMBlock *block = QLIST_FIRST(&ram_list.blocks);
+    RAMBlock *last_block = NULL;
+    ram_addr_t offset = 0;
+    ram_addr_t current_addr;
+    int bytes_sent = 0;
+    struct task_body *body;
+    int body_len = 0;
+
+    current_addr = block->offset + offset;
+
+    do {
+        if (cpu_physical_memory_get_dirty(current_addr, MIGRATION_DIRTY_FLAG)) {
+            uint8_t *p;
+            int cont;
+
+            if (block == last_block)
+                cont = RAM_SAVE_FLAG_CONTINUE;
+            else {
+                last_block = block;
+                cont = 0;
+            }
+
+            cpu_physical_memory_reset_dirty(current_addr,
+                                            current_addr + TARGET_PAGE_SIZE,
+                                            MIGRATION_DIRTY_FLAG);
+            p = block->host + offset;
+
+            /*
+             * batch and add new task
+             */
+            if (body_len == 0) {
+                body = (struct task_body *)malloc(sizeof(struct task_body));
+                body->types = TASK_TYPE_MEM;
+            }
+
+            body->pages[body_len].ptr = p;
+            body->pages[body_len].cont = cont;
+            body_len ++;
+
+            if (body_len == DEFAULT_MEM_BATCH_LEN) {
+                int ret;
+                body->len = body_len;
+
+                //finish one batch, for next batch, the RAM_SAVE_FLAG_CONTINUE should not be set
+                last_block = NULL;
+                body_len = 0;
+                if (queue_push_task(task_queue, body) < 0)
+                    fprintf(stderr, "Enqueue task error\n");
+            }
+
+            bytes_sent += TARGET_PAGE_SIZE;
+        }
+
+        offset += TARGET_PAGE_SIZE;
+         
+        if (offset >= block->length) {
+            offset = 0;
+            block = QLIST_NEXT(block, next);
+            //hit the iteration end
+            if (!block) {
+                break;
+            }
+        }
+
+        current_addr = block->offset + offset;
+    } while (1);
+
+    /*
+     * handle last task this iteration
+     */
+    if (body_len > 0) {
+        int ret;
+        body->len = body_len;
+
+        if (queue_push_task(task_queue, body) < 0)
+            fprintf(stderr, "Enqueue task error\n");
+    }
+}
+
+unsigned long
+ram_save_iter(int stage, struct migration_task_queue *task_queue, QEMUFile *f) {
+    unsigned long bytes_transferred = 0;
+
+    /* try transferring iterative blocks of memory */
+    bytes_transferred = ram_save_block_master(task_queue);
+    
+    if (stage == 3) {
+        int bytes_sent;
+
+        /* flush all remaining blocks regardless of rate limiting */ 
+        bytes_transferred = ram_save_block_master(s);
+        DPRINTF("Total memory sent last iter %ld\n", bytes_transferred);
+        cpu_physical_memory_set_dirty_tracking(0);
+    }
+
+    return bytes_transferred;
+}
+
+int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque is FdMigrationState
 {
     ram_addr_t addr;
     uint64_t bytes_transferred_last;
@@ -257,12 +382,10 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
         cpu_physical_memory_set_dirty_tracking(0);
         return 0;
     }
-
-    if (cpu_physical_sync_dirty_bitmap(0, TARGET_PHYS_ADDR_MAX) != 0) {
-        qemu_file_set_error(f);
-        return 0;
-    }
-
+    
+    /*
+     * if stage == 1, we do not transfer memory
+     */
     if (stage == 1) {
         RAMBlock *block;
         bytes_transferred = 0;
@@ -281,9 +404,6 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
             }
         }
 
-        /* Enable dirty memory tracking */
-        cpu_physical_memory_set_dirty_tracking(1);
-
         qemu_put_be64(f, ram_bytes_total() | RAM_SAVE_FLAG_MEM_SIZE);
 
         QLIST_FOREACH(block, &ram_list.blocks, next) {
@@ -295,49 +415,16 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
         /*
          * classicsong
          * step 1 only init the memory in the dest
+         * tell the end of initialization
          */
         qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
+
+        DPRINTF("Finish memory negotiation start memory master\n");
+
+        create_host_memory_master(opaque);
+
         return 0;
     }
-
-    bytes_transferred_last = bytes_transferred;
-    bwidth = qemu_get_clock_ns(rt_clock);
-
-    while (!qemu_file_rate_limit(f)) {
-        int bytes_sent;
-
-        bytes_sent = ram_save_block(f);
-        bytes_transferred += bytes_sent;
-        if (bytes_sent == 0) { /* no more blocks */
-            break;
-        }
-    }
-
-    bwidth = qemu_get_clock_ns(rt_clock) - bwidth;
-    bwidth = (bytes_transferred - bytes_transferred_last) / bwidth;
-
-    /* if we haven't transferred anything this round, force expected_time to a
-     * a very high value, but without crashing */
-    if (bwidth == 0) {
-        bwidth = 0.000001;
-    }
-
-    /* try transferring iterative blocks of memory */
-    if (stage == 3) {
-        int bytes_sent;
-
-        /* flush all remaining blocks regardless of rate limiting */
-        while ((bytes_sent = ram_save_block(f)) != 0) {
-            bytes_transferred += bytes_sent;
-        }
-        cpu_physical_memory_set_dirty_tracking(0);
-    }
-
-    qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
-
-    expected_time = ram_save_remaining() * TARGET_PAGE_SIZE / bwidth;
-
-    return (stage == 2) && (expected_time <= migrate_max_downtime());
 }
 
 static inline void *host_from_stream_offset(QEMUFile *f,

@@ -317,6 +317,42 @@ void migrate_fd_put_notify(void *opaque)
     qemu_file_put_notify(s->file);
 }
 
+ssize_t migrate_fd_put_ready_slave(void *opaque, const void *data, size_t size) {
+    fprintf(stderr, "error calling put_ready\n");
+    return -1;
+}
+
+ssize_t migrate_fd_put_buffer_slave(void *opaque, const void *data, size_t size)
+{
+    FdMigrationStateSlave *s = opaque;
+    ssize_t ret;
+
+    /*
+     * classicsong
+     * need to handle ssl here
+     */
+
+    do {
+        ret = s->write(s, data, size);
+    } while (ret == -1 && ((s->get_error(s)) == EINTR));
+
+    if (ret == -1)
+        ret = -(s->get_error(s));
+
+    if (ret == -EAGAIN) {
+        fprintf("error write data\n");
+        //qemu_set_fd_handler2(s->fd, NULL, NULL, migrate_fd_put_notify, s);
+    } else if (ret < 0) {
+        if (s->mon) {
+            monitor_resume(s->mon);
+        }
+        s->state = MIG_STATE_ERROR;
+        notifier_list_notify(&migration_state_notifiers);
+    }
+
+    return ret;
+}
+
 ssize_t migrate_fd_put_buffer(void *opaque, const void *data, size_t size)
 {
     FdMigrationState *s = opaque;
@@ -362,7 +398,58 @@ void migrate_fd_connect(FdMigrationState *s)
         return;
     }
     
-    migrate_fd_put_ready(s);
+    /*
+     * classicsong use migrate_fd_put(s) instead of 
+     * migrate_fd_put_ready
+     *
+     * In qemu_migrate_savevm_state_begin the memory master and disk master are created
+     * The data transfer iterations are started automatically when slaves are ready
+     * The main process has to wait for last interation in migrate_fd_put first
+     */
+    //migrate_fd_put_ready(s);
+    migrate_fd_put(s);
+}
+
+void migrate_fd_put(void *opaque)
+{
+    FdMigrationState *s = opaque;
+
+    if (s->state != MIG_STATE_ACTIVE) {
+        DPRINTF("put_ready returning because of non-active state\n");
+        return;
+    }
+
+    pthread_barrier_wait(&s->last_barr);
+
+    /*
+     * stop VM first and then tell mem_master and disk_master to process last iteration
+     */
+    vm_stop(0);
+    cpu_synchronize_all_states();
+
+    pthread_barrier_wait(&s->last_barr);
+    /*
+     * wait for last iteration of memory and disk
+     */
+    pthread_barrier_wait(&s->last_barr);
+
+    if (qemu_savevm_nolive_state(s->mon, s->file) < 0) {
+        if (old_vm_running) {
+            vm_start();
+        }
+        state = MIG_STATE_ERROR;
+    } else {
+        state = MIG_STATE_COMPLETED;
+    }
+
+    if (migrate_fd_cleanup(s) < 0) {
+        if (old_vm_running) {
+            vm_start();
+        }
+        state = MIG_STATE_ERROR;
+    }
+    s->state = state;
+    notifier_list_notify(&migration_state_notifiers);
 }
 
 void migrate_fd_put_ready(void *opaque)

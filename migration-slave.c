@@ -1,3 +1,5 @@
+#include "atomic.h"
+
 /*
  * host_port: the target connection ip:port
  */
@@ -30,6 +32,8 @@ FdMigrationStateSlave *tcp_start_outgoing_migration_slave(Monitor *mon,
 
 void start_host_slave(void *data) {
     struct FdMigrationStateSlave *s = (struct FdMigrationStateSlave *)data;
+    struct task_body *body;
+    int i;
 
     /*
      *      * create network connection
@@ -41,22 +45,68 @@ void start_host_slave(void *data) {
     } 
 
     /*
-     *      * create file ops
-     *           */
-    s->file = qemu_fopen_ops_buffered(s,
+     * create file ops
+     */
+    s->file = qemu_fopen_ops_buffered_slave(s,
                                       s->bandwidth_limit,
                                       migrate_fd_put_buffer_slave,
                                       migrate_fd_put_ready_slave,
                                       migrate_fd_wait_for_unfreeze_slave,
                                       migrate_fd_close_slave);
 
+    pthread_barrier_wait(&s->sender_barr.sender_iter_barr);
+
     /*
      * wait for following commands
+     * As disk task maybe limited by the disk throughput, so we perfer to transfer disk first and then memory
+     * While sending data in one iteration, we assume the total throughput of this iteration is static
+     * So the effect of sending memory first and sending disk first is same.
      */
+    while (1) {
+        /* check for disk */
+        if (queue_pop_task(s->disk_task_queue, &body) > 0) {
+            /* Section type */
+            qemu_put_byte(f, QEMU_VM_SECTION_PART);
+            qemu_put_be32(f, s->disk_task_queue->section_id);
+            /*
+             * handle disk
+             */
+            disk_save_block_slave();
+        }
+        /* check for memory */
+        else if (queue_pop_task(s->mem_task_queue, &body) < 0) {
+            /* Section type */
+            qemu_put_byte(f, QEMU_VM_SECTION_PART);
+            qemu_put_be32(f, s->mem_task_queue->section_id);
+
+            for (i = 0; i < body->len; i++) {
+                ram_save_block_slave(body->pages[i].ptr, body->pages[i].cont, s);
+            }
+        }
+        /* no disk and memory task */
+        else {
+            if (s->sender_barr.mem_state == BARR_STATE_ITER_END && 
+                s->sender_barr.disk_state == BARR_STATE_ITER_END) {
+                pthread_barrier_wait(&s->sender_barr.sender_iter_barr);
+                pthread_barrier_wait(&s->sender_barr.next_iter_barr);
+            }
+
+            //get nothing, wait for a moment
+            usleep(SLEEP_SHORT_TIME);
+        }
+    }
 }
 
 void init_host_slaves(struct FdMigrationState *s) {
     int i;
+
+    init_migr_barrier(&s->sender_barr, s->para_config->num_slave);
+
+    /*
+     * no need for disk migration
+     */
+    if (s->mig_state.blk == 0)
+        s->disk_barr.state = BARR_STATE_SKIP;
 
     for (i = 0; i < s->para_config->num_slave; i ++) {
         FdMigrationStateSlave *slave_s;

@@ -40,9 +40,7 @@ struct MigrationState
 };
 
 typedef struct FdMigrationState FdMigrationState;
-
-#define START_MEMORY_MIGRATION 1
-#define HOLD_MEMORY_MIGRATION 0
+typedef struct FdMigrationStateSlave FdMigrationStateSlave;
 
 struct migration_slave
 {
@@ -73,10 +71,14 @@ struct FdMigrationState
     int (*write)(struct FdMigrationState*, const void *, size_t);
     void *opaque;
     struct parallel_param *para_config;
-    struct migration_task_queue *task_queue;
+    struct migration_task_queue *mem_task_queue;
+    struct migration_task_queue *disk_task_queue;
     struct migration_slave *slave_list;
     struct migration_master *master_list;
-    int migrate_memory;    //indicate whether start migrating memory
+    struct migration_barrier sender_barr;
+    pthread_barrier_t last_barr;
+    volatile int laster_iter;
+    int section_id;
 };
 
 struct FdMigrationDestState

@@ -1485,21 +1485,16 @@ int qemu_migrate_savevm_state_begin(FdMigrationState *s, Monitor *mon, QEMUFile 
     }
 
     /*
-     * judge whether to start memory migration immediately
-     * need memory info and disk info
-     * default is to start
-     */
-    if (0)
-        s->migrate_memory = HOLD_MEMORY_MIGRATION;
-    s->migrate_memory = START_MEMORY_MIGRATION;
-
-    /*
      * create task queue
      */
-    s->task_queue = new_task_queue();
+    s->mem_task_queue = new_task_queue();
+    s->disk_task_queue = new_task_queue();
 
     s->master_list = NULL;
     s->slave_list = NULL;
+
+    pthread_barrier_init(&s->last_barr);
+    s->laster_iter = 0;
     /*
      * initiate slave threads
      */
@@ -1515,6 +1510,7 @@ int qemu_migrate_savevm_state_begin(FdMigrationState *s, Monitor *mon, QEMUFile 
         /* Section type */
         qemu_put_byte(f, QEMU_VM_SECTION_START);
         qemu_put_be32(f, se->section_id);
+        s->section_id = se->section_id;
 
         /* ID string */
         len = strlen(se->idstr);
@@ -1524,13 +1520,12 @@ int qemu_migrate_savevm_state_begin(FdMigrationState *s, Monitor *mon, QEMUFile 
         qemu_put_be32(f, se->instance_id);
         qemu_put_be32(f, se->version_id);
 
-        se->save_live_state(mon, f, QEMU_VM_SECTION_START, se->opaque);
+        se->save_live_state(mon, f, QEMU_VM_SECTION_START, s);
 
-        if (se->save_live_state == ram_save_live)
-            create_host_memory_master(s);
-
+        /* this should be done in block save live
         if (se->save_live_state == ram_save_block)
             create_host_disk_master(s);
+        */
     }
 
     if (qemu_file_has_error(f)) {
@@ -1594,10 +1589,6 @@ int qemu_savevm_state_iterate(Monitor *mon, QEMUFile *f)
         if (se->save_live_state == NULL)
             continue;
 
-        /* Section type */
-        qemu_put_byte(f, QEMU_VM_SECTION_PART);
-        qemu_put_be32(f, se->section_id);
-
         ret = se->save_live_state(mon, f, QEMU_VM_SECTION_PART, se->opaque);
         if (!ret) {
             /* Do not proceed to the next vmstate before this one reported
@@ -1615,6 +1606,40 @@ int qemu_savevm_state_iterate(Monitor *mon, QEMUFile *f)
         qemu_savevm_state_cancel(mon, f);
         return -EIO;
     }
+
+    return 0;
+}
+
+//classicsong
+int 
+qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f) {
+    SaveStateEntry *se;
+
+    QTAILQ_FOREACH(se, &savevm_handlers, entry) {
+        int len;
+
+	if (se->save_state == NULL && se->vmsd == NULL)
+	    continue;
+
+        /* Section type */
+        qemu_put_byte(f, QEMU_VM_SECTION_FULL);
+        qemu_put_be32(f, se->section_id);
+
+        /* ID string */
+        len = strlen(se->idstr);
+        qemu_put_byte(f, len);
+        qemu_put_buffer(f, (uint8_t *)se->idstr, len);
+
+        qemu_put_be32(f, se->instance_id);
+        qemu_put_be32(f, se->version_id);
+
+        vmstate_save(f, se);
+    }
+
+    qemu_put_byte(f, QEMU_VM_EOF);
+
+    if (qemu_file_has_error(f))
+        return -EIO;
 
     return 0;
 }
@@ -1835,7 +1860,6 @@ int qemu_loadvm_state(QEMUFile *f)
 
     dest_state = (struct FdMigrationDestState *)malloc(sizeof(struct FdMigrationDestState));
     dest_state->slave_list = NULL;
-    dest_state->task_queue = new_task_queue();
 
     while ((section_type = qemu_get_byte(f)) != QEMU_VM_EOF) {
         uint32_t instance_id, version_id, section_id;
