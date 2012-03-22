@@ -16,6 +16,8 @@
 #define DEFAULT_DISK_BATCH_SIZE 2 * 1024 * 1024 //2M
 
 #define DEFAULT_MEM_BATCH_LEN (DEFAULT_MEM_BATCH_SIZE/TARGET_PAGE_SIZE)
+#define DEFAULT_DISK_BATCH_LEN 128
+#define DEFAULT_DISK_BATCH_MIN_LEN (DEFAULT_DISK_BATCH_LEN/2)
 
 struct task_body {
     int type;
@@ -27,9 +29,9 @@ struct task_body {
         } pages[DEFAULT_MEM_BATCH_LEN];
         struct {
             char *ptr;
-        }block;
+        } blocks[DEFAULT_DISK_BATCH_LEN];
     };
-    //...
+    int iter_num;
 };
 
 struct linked_list {

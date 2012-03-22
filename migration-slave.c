@@ -71,7 +71,13 @@ void start_host_slave(void *data) {
             /*
              * handle disk
              */
-            disk_save_block_slave();
+            for (i = 0; i < body->len; i++) {
+                disk_save_block_slave(body->ptr, body->iter_num, s->file);
+            }
+
+            /* End of the single task */
+            qemu_put_be64(f, BLK_MIG_FLAG_EOS);
+            free(body);
         }
         /* check for memory */
         else if (queue_pop_task(s->mem_task_queue, &body) < 0) {
@@ -82,6 +88,10 @@ void start_host_slave(void *data) {
             for (i = 0; i < body->len; i++) {
                 ram_save_block_slave(body->pages[i].ptr, body->pages[i].cont, s);
             }
+
+            /* End of the single task */
+            qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
+            free(body);
         }
         /* no disk and memory task */
         else {

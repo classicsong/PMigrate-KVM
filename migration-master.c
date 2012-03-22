@@ -176,10 +176,13 @@ host_disk_master(void * data) {
     int iter_num = 0;
     unsigned long total_sent = 0;
     //unsigned long sent_this_iter = 0, sent_last_iter = 0;
-    unsigned long disk_size = 
+    unsigned long disk_size = block_mig_state.total_sector_sum * BDRV_SECTOR_SIZE;
     int num_slaves = s->num_slaves;
     unsigned long data_remaining;
     unsigned long bwidth;
+    Monitor *mon = s->mon;
+
+    DPRINTF("The default disk size is %lx\n", disk_size);
 
     /*
      * wait for all slaves and master to be ready
@@ -208,7 +211,8 @@ host_disk_master(void * data) {
          * dispatch job here
          * ram_save_iter will 
          */
-        s->disk_task_queue->sent_this_iter = disk_save_iter(QEMU_VM_SECTION_PART, s->disk_task_queue, s->file);
+        s->disk_task_queue->sent_this_iter = disk_save_iter(QEMU_VM_SECTION_PART, mon,
+                                                            s->disk_task_queue, s->file);
 
     skip_iter:
         /*
@@ -227,7 +231,15 @@ host_disk_master(void * data) {
         bwidth = qemu_get_clock_ns(rt_clock) - bwidth;
         bwidth = s->disk_task_queue->sent_this_iter / bwidth;
 
-        data_remaining = get_remaining_dirty();
+        /*
+         * The data_remaining includes dirty blocks, block have been reading using AIO
+         *                             and blocks have bee read but not sent
+         */
+        data_remaining = get_remaining_dirty() + 
+            (block_mig_state.submitted + block_mig_state.read_done) * BLOCK_SIZE;
+        DPRINTF("The data_remaining %lx; %lx; %lx\n", get_remaining_dirty(), 
+                block_mig_state.submitted, block_mig_state.read_done);
+
         s->disk_task_queue->sent_last_iter = s->disk_task_queue->sent_this_iter;
         total_sent += s->disk_task_queue->sent_this_iter;
 

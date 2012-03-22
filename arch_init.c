@@ -268,7 +268,6 @@ ram_save_block_slave(uint8_t *p, int cont, struct FdMigrationStateSlave *s) {
         }
         qemu_put_buffer(f, p, TARGET_PAGE_SIZE);
     }
-
 }
 
 static unsigned long
@@ -311,6 +310,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
             body->pages[body_len].ptr = p;
             body->pages[body_len].cont = cont;
             body_len ++;
+            body->iter_num = task_queue->iter_num;
 
             if (body_len == DEFAULT_MEM_BATCH_LEN) {
                 int ret;

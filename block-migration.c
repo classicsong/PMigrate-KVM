@@ -99,6 +99,28 @@ static void blk_send(QEMUFile *f, BlkMigBlock * blk)
     qemu_put_buffer(f, blk->buf, BLOCK_SIZE);
 }
 
+//classicsong
+void
+disk_save_block_slave(BlkMigBlock *blk, int iter_num, QEMUFile *f) {
+    int len;
+
+    /* sector number and flags */
+    qemu_put_be64(f, (blk->sector << BDRV_SECTOR_BITS)
+                     | BLK_MIG_FLAG_DEVICE_BLOCK);
+
+    /* device name */
+    len = strlen(blk->bmds->bs->device_name);
+    qemu_put_byte(f, len);
+    /* iteration num */
+    qemu_put_be32(f, iter_num);
+    qemu_put_buffer(f, (uint8_t *)blk->bmds->bs->device_name, len);
+
+    qemu_put_buffer(f, blk->buf, BLOCK_SIZE);
+
+    qemu_free(blk->buf);
+    qemu_free(blk);
+}
+
 int blk_mig_active(void)
 {
     return !QSIMPLEQ_EMPTY(&block_mig_state.bmds_list);
@@ -555,23 +577,36 @@ static void blk_mig_cleanup(Monitor *mon)
     monitor_printf(mon, "\n");
 }
 
-static void
-put_task_master(BlkMigBlock *blk) {
-    int iter_num = task_q->iter_num;
-
-    /*
-     * put blk into the task queue with the iter_num
-     */
-}
-
-static void
-flush_blks_master(struct migration_task_queue *task_q) {
+static unsigned long 
+flush_blks_master(struct migration_task_queue *task_q, QEMUFile *f, int last) {
     //put the task into task queue
     BlkMigBlock *blk;
+    struct task_body *body;
 
     DPRINTF("%s Enter submitted %d read_done %d transferred %d\n",
             __FUNCTION__, block_mig_state.submitted, block_mig_state.read_done,
             block_mig_state.transferred);
+
+    /*
+     * If it is the end of the iteration and no data in the blk_list 
+     * return
+     */
+    if (last == 1) {
+        if (block_mig_state.read_done == 0)
+            return 0;
+    }
+    /*
+     * This is no the end of the iteration
+     * If there is not enough blocks to at least half fullfil a single task
+     * Skip
+     */
+    else if (block_mig_state.read_done < DEFAULT_DISK_BATCH_MIN_LEN)
+        return 0;
+
+    body = (struct task_body *)malloc(sizeof(struct task_body));
+    body->types = TASK_TYPE_DISK;
+    body->len = 0;
+    body->iter_num = task_queue->iter_num;
 
     while ((blk = QSIMPLEQ_FIRST(&block_mig_state.blk_list)) != NULL) {
         if (blk->ret < 0) {
@@ -579,7 +614,7 @@ flush_blks_master(struct migration_task_queue *task_q) {
             break;
         }
 
-        put_task_master(blk);
+        body->blocks[body->len++].ptr = blk;
         //blk_send(f, blk);
 
         QSIMPLEQ_REMOVE_HEAD(&block_mig_state.blk_list, entry);
@@ -587,11 +622,21 @@ flush_blks_master(struct migration_task_queue *task_q) {
         block_mig_state.read_done--;
         block_mig_state.transferred++;
         assert(block_mig_state.read_done >= 0);
+
+        if (body->len == DEFAULT_DISK_BATCH_LEN)
+            break;
     }
+
+    if (queue_push_task(task_queue, body) < 0)
+        fprintf(stderr, "Enqueue task error\n");
 
     DPRINTF("%s Exit submitted %d read_done %d transferred %d\n", __FUNCTION__,
             block_mig_state.submitted, block_mig_state.read_done,
             block_mig_state.transferred);
+
+    DPRINTF("Task enqueue len %d\n", body->len);
+
+    return body->len * BLOCK_SIZE;
 }
 
 //classicsong
@@ -603,8 +648,16 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
     int64_t sector;
     int nr_sectors;
     unsigned long data_sent = 0;
+    struct task_body *body;
 
-    data_sent += flush_blks_master(task_q);
+    monitor_printf(mon, "last iteration for disk");
+    data_sent += flush_blks_master(task_q, f);
+
+    body = (struct task_body *)malloc(sizeof(struct task_body));
+    body->types = TASK_TYPE_DISK;
+    body->len = 0;
+    body->iter_num = task_queue->iter_num;
+
     /*
      * the for loop will handle all dirty pages in this sector
      */
@@ -630,7 +683,7 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
                 goto error;
             }
      
-            put_task_master(blk);
+            body->blocks[body->len++].ptr = blk;
             /*
             blk_send(f, blk);
 
@@ -639,6 +692,16 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
             */
             bdrv_reset_dirty(bmds->bs, sector, nr_sectors);
             data_sent += BLOCK_SIZE;
+
+            if (body->len == DEFAULT_DISK_BATCH_LEN) {
+                if (queue_push_task(task_queue, body) < 0)
+                    fprintf(stderr, "Enqueue task error\n");
+
+                body = (struct task_body *)malloc(sizeof(struct task_body));
+                body->types = TASK_TYPE_DISK;
+                body->len = 0;
+                body->iter_num = task_queue->iter_num;
+            }
         }
 
         sector += BDRV_SECTORS_PER_DIRTY_CHUNK;
@@ -649,32 +712,53 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
 }
 
 static unsigned long
-disk_save_master(struct migration_task_queue *task_q) {
+disk_save_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFile *file) {
     unsigned long data_sent = 0;
+    int flush_batch = 1;
+    unsigned long sent_last = 0;
+
     /*
      * first iteration transfer all blocks
      */
-    while (block_mig_state.bulk_completed == 0) {
-        /* first finish the bulk phase */
-        if (blk_mig_save_bulked_block(mon, f) == 0) {
-            /* finished saving bulk on all devices */
-            block_mig_state.bulk_completed = 1;
+    if (block_mig_state.bulk_completed == 0)
+        while (block_mig_state.bulk_completed == 0) {
+            /* first finish the bulk phase */
+            if (blk_mig_save_bulked_block(mon, f) == 0) {
+                /* finished saving bulk on all devices */
+                block_mig_state.bulk_completed = 1;
+            }
+
+            if (flush_batch == DEFAULT_DISK_BATCH_LEN) {
+                data_sent += flush_blks_master(task_q, f, 0);
+                flush_batch = 0;
+            }
+
+            flush_batch ++;
+        }
+    else
+        /*
+         * following iterations transfer dirty blocks
+         */
+        while (blk_mig_save_dirty_block(mon, f, 1) != 0) {
+
+            if (flush_batch == DEFAULT_DISK_BATCH_LEN) {
+                data_sent += flush_blks_master(task_q, f, 0);
+                flush_batch = 0;
+            }
+
+            flush_batch ++;
         }
 
-        data_sent += flush_blks_master(task_q);
-    }
+    do {
+        sent_last = flush_blks_master(task_q, f, 1);
+        data_sent += sent_last;
+    } while (sent_last != 0);
 
-    /*
-     * following iterations transfer dirty blocks
-     */
-    while (blk_mig_save_dirty_block(mon, f, 1) != 0) {
-        /* no more dirty blocks */
-        data_sent += flush_blks_master(task_q);
-    }
+    return data_sent;
 }
 
 static unsigned long
-disk_save_last_master(struct migration_task_queue *task_q) {
+disk_save_last_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFile *file) {
     BlkMigDevState *bmds;
     unsigned long data_sent = 0;
 
@@ -699,14 +783,17 @@ disk_save_last_master(struct migration_task_queue *task_q) {
 
 
 unsigned long
-block_save_iter(int stage, struct migration_task_queue *task_queue, QEMUFile *f) {
+block_save_iter(int stage, Monitor *mon, 
+                struct migration_task_queue *task_queue, QEMUFile *f) {
     unsigned long bytes_transferred = 0;
 
     if (stage == 2)
-        bytes_transferred = disk_save_master(task_queue);
+        bytes_transferred = disk_save_master(mon, task_queue, f);
 
     if (stage == 3)
-        bytes_transferred = disk_save_last_master(task_queue);
+        bytes_transferred = disk_save_last_master(mon, task_queue, f);
+
+    return bytes_transferred;
 }
 
 int
@@ -748,24 +835,8 @@ static int block_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
         return 0;
     }
 
-    {
-        flush_blks(f);
-
-        if (qemu_file_has_error(f)) {
-            blk_mig_cleanup(mon);
-            return 0;
-        }
-    }
-
-        qemu_put_be64(f, (100 << BDRV_SECTOR_BITS) | BLK_MIG_FLAG_PROGRESS);
-
-        if (qemu_file_has_error(f)) {
-            return 0;
-        }
-
-        monitor_printf(mon, "Block migration completed\n");
-    }
-
+    monitor_printf(mon, "Block migration start\n");
+    
     qemu_put_be64(f, BLK_MIG_FLAG_EOS);
 
     DPRINTF("Finish disk negotiation start memory master\n");
