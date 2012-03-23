@@ -26,4 +26,5 @@ struct parallel_param {
 };
 
 extern struct parallel_param *parse_file(char *file);
+extern int reveal_param(struct parallel_param *param);
 #endif

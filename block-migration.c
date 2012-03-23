@@ -615,7 +615,6 @@ flush_blks_master(struct migration_task_queue *task_q, QEMUFile *f, int last) {
         }
 
         body->blocks[body->len++].ptr = blk;
-        //blk_send(f, blk);
 
         QSIMPLEQ_REMOVE_HEAD(&block_mig_state.blk_list, entry);
 
@@ -684,12 +683,7 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
             }
      
             body->blocks[body->len++].ptr = blk;
-            /*
-            blk_send(f, blk);
 
-            qemu_free(blk->buf);
-            qemu_free(blk);
-            */
             bdrv_reset_dirty(bmds->bs, sector, nr_sectors);
             data_sent += BLOCK_SIZE;
 

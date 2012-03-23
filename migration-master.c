@@ -211,7 +211,7 @@ host_disk_master(void * data) {
          * dispatch job here
          * ram_save_iter will 
          */
-        s->disk_task_queue->sent_this_iter = disk_save_iter(QEMU_VM_SECTION_PART, mon,
+        s->disk_task_queue->sent_this_iter = block_save_iter(QEMU_VM_SECTION_PART, mon,
                                                             s->disk_task_queue, s->file);
 
     skip_iter:
