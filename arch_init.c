@@ -42,6 +42,9 @@
 #include "gdbstub.h"
 #include "hw/smbios.h"
 
+//classicsong
+#include "migr-vqueue.h"
+
 #ifdef TARGET_SPARC
 int graphic_width = 1024;
 int graphic_height = 768;
@@ -89,6 +92,12 @@ const uint32_t arch_type = QEMU_ARCH;
 #define RAM_SAVE_FLAG_PAGE     0x08
 #define RAM_SAVE_FLAG_EOS      0x10
 #define RAM_SAVE_FLAG_CONTINUE 0x20
+
+/* classicsong
+ * mem_vnum
+ */
+#define MEM_VNUM_OFFSET        6
+#define MEM_VNUM_MASK          (0x3f << MEM_VNUM_MASK)
 
 static int is_dup_page(uint8_t *page, uint8_t ch)
 {
@@ -248,11 +257,12 @@ static void sort_ram_list(void)
 
 
 int
-ram_save_block_slave(uint8_t *p, int cont, struct FdMigrationStateSlave *s) {
+ram_save_block_slave(ram_addr_t offset, uint8_t *p, int cont, 
+                     struct FdMigrationStateSlave *s, int mem_vnum) {
     QEMUFile *f = s->file;
 
     if (is_dup_page(p, *p)) {
-        qemu_put_be64(f, offset | cont | RAM_SAVE_FLAG_COMPRESS);
+        qemu_put_be64(f, offset | cont | RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
         if (!cont) {
             qemu_put_byte(f, strlen(block->idstr));
             qemu_put_buffer(f, (uint8_t *)block->idstr,
@@ -309,6 +319,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
 
             body->pages[body_len].ptr = p;
             body->pages[body_len].cont = cont;
+            body->pages[body_len].addr = current_addr;
             body_len ++;
             body->iter_num = task_queue->iter_num;
 
@@ -333,6 +344,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
             block = QLIST_NEXT(block, next);
             //hit the iteration end
             if (!block) {
+                DPRINTF("Hit memory iteration end\n");
                 break;
             }
         }
@@ -407,6 +419,7 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
         qemu_put_be64(f, ram_bytes_total() | RAM_SAVE_FLAG_MEM_SIZE);
 
         QLIST_FOREACH(block, &ram_list.blocks, next) {
+            DPRINTF("Put mem block %s\n", block->idstr);
             qemu_put_byte(f, strlen(block->idstr));
             qemu_put_buffer(f, (uint8_t *)block->idstr, strlen(block->idstr));
             qemu_put_be64(f, block->length);
@@ -463,6 +476,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
     int flags;
     struct task_body *task = NULL;
     int num_pages;
+    SaveStateEntry *se = (struct SaveStateEntry *)opaque;
 
     if (version_id < 3 || version_id > 4) {
         return -EINVAL;
@@ -475,10 +489,19 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
         addr &= TARGET_PAGE_MASK;
 
         if (flags & RAM_SAVE_FLAG_MEM_SIZE) {
+            /*
+             * classicsong add version queue for memory
+             * The queue length is equals to the number of pages guest VM has
+             */
+            se->version_queue = (int *)calloc(sizeof(int) * (addr / TARGET_PAGE_SIZE));
+            se->total_size = addr / TARGET_PAGE_SIZE;
+
             if (version_id == 3) {
                 if (addr != ram_bytes_total()) {
                     return -EINVAL;
                 }
+
+                DPRINTF("RAM save function version 3\n");
             } else {
                 /* Synchronize RAM block list */
                 char id[256];
@@ -494,6 +517,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                     id[len] = 0;
                     length = qemu_get_be64(f);
 
+                    DPRINTF("Get mem block %s\n", id);
                     QLIST_FOREACH(block, &ram_list.blocks, next) {
                         if (!strncmp(id, block->idstr, sizeof(id))) {
                             if (block->length != length)
@@ -511,18 +535,22 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                     total_ram_bytes -= length;
                 }
             }
-
-            /*
-             * classicsong
-             * the memory patch is applied by slaves it self
-             * So after receive block info, the host will send RAM_SAVE_FLAG_EOS to let dest 
-             * to terminate the load_ram call.
-             */
         }
+
+
+        /*
+         * classicsong
+         * the memory patch is applied by slaves it self
+         * So after receive block info, the host will send RAM_SAVE_FLAG_EOS to let dest 
+         * to terminate the load_ram call.
+         */
 
         if (flags & RAM_SAVE_FLAG_COMPRESS) {
             void *host;
             uint8_t ch;
+            uint32_t mem_vnum = ((flags & MEM_VNUM_MASK) >> MEM_VNUM_OFFSET);
+            uint32_t curr_vnum;
+            volatile uint32_t *vnum_p;
 
             if (version_id == 3)
                 host = qemu_get_ram_ptr(addr);
@@ -530,6 +558,42 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 host = host_from_stream_offset(f, addr, flags);
             if (!host) {
                 return -EINVAL;
+            }
+
+            if (se->total_size < (addr / TARGET_PAGE_SIZE))
+                fprintf("error host memory addr %x; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
+            vnum_p = &(se->version_queue[addr/TARGET_PAGE_SIZE]);
+
+        re_check_press:
+            curr_vnum = *vnum_p;
+
+            /*
+             * some one is holding the page
+             */
+            while (curr_vnum % 2 == 1) {
+                curr_vnum = *vnum_p;
+            }
+
+            /*
+             * skip the current patch
+             * update page path:
+             * check current version of mem queue curr_vnum (init to 0)
+             * current mem_vnum (from 0 to n)
+             *
+             * curr_vnum set to 2 means current memory version is updated to 0
+             * curr_vnum set to 1 means current memory is updating to 0
+             * curr_vnum set to 4 means current memory version is updated to 1
+             * curr_vnum set to 3 means current memory is updating to 1
+             */
+            if (curr_vnum > mem_vnum * 2)
+                continue;
+
+            /*
+             * now we will hold the page
+             */
+            if (hold_page(vnum_p, curr_vnum, mem_vnum)) {
+                /* fail holding the page */
+                goto re_check_press;
             }
 
             ch = qemu_get_byte(f);
@@ -541,15 +605,64 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 qemu_madvise(host, TARGET_PAGE_SIZE, QEMU_MADV_DONTNEED);
             }
 #endif
+
+            /*
+             * now we release the page
+             */
+            release_page(vnum_p, mem_vnum);
         } else if (flags & RAM_SAVE_FLAG_PAGE) {
             void *host;
+            uint32_t mem_vnum = ((flags & MEM_VNUM_MASK) >> MEM_VNUM_OFFSET);
+            uint32_t curr_vnum;
+            volatile uint32_t *vnum_p;
 
             if (version_id == 3)
                 host = qemu_get_ram_ptr(addr);
             else
                 host = host_from_stream_offset(f, addr, flags);
 
+            if (se->total_size < (addr / TARGET_PAGE_SIZE))
+                fprintf("error host memory addr %x; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
+            vnum_p = &(se->version_queue[addr/TARGET_PAGE_SIZE]);
+
+        re_check_nor:
+            curr_vnum = *vnum_p;
+
+            /*
+             * some one is holding the page
+             */
+            while (curr_vnum % 2 == 1) {
+                curr_vnum = *vnum_p;
+            }
+
+            /*
+             * skip the current patch
+             * update page path:
+             * check current version of mem queue curr_vnum (init to 0)
+             * current mem_vnum (from 0 to n)
+             *
+             * curr_vnum set to 2 means current memory version is updated to 0
+             * curr_vnum set to 1 means current memory is updating to 0
+             * curr_vnum set to 4 means current memory version is updated to 1
+             * curr_vnum set to 3 means current memory is updating to 1
+             */
+            if (curr_vnum > mem_vnum * 2)
+                continue;
+
+            /*
+             * now we will hold the page
+             */
+            if (hold_page(vnum_p, curr_vnum, mem_vnum)) {
+                /* fail holding the page */
+                goto re_check_nor;
+            }
+
             qemu_get_buffer(f, host, TARGET_PAGE_SIZE);
+
+            /*
+             * now we release the page
+             */
+            release_page(vnum_p, mem_vnum);
         }
         if (qemu_file_has_error(f)) {
             return -EIO;

@@ -99,7 +99,7 @@ struct FdMigrationSlaveState
     int (*close)(struct FdMigrationState*);
     int (*write)(struct FdMigrationState*, const void *, size_t);
     void *opaque;
-    SSL_func;
+#    SSL_func;
     char *host_ip;
     char *dest_ip;
     struct migration_task *task_queue;

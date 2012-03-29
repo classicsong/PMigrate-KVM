@@ -188,6 +188,35 @@ typedef struct QEMUFileSocket
     QEMUFile *file;
 } QEMUFileSocket;
 
+/*
+ * get and close buffer ops with ssl support
+ */
+static int socket_get_buffer_ssl(void *opaque, uint8_t *buf, int64_t pos, int size)
+{
+    QEMUFileSocket *s = opaque;
+    ssize_t len;
+
+    do {
+        len = recv(s->fd, (void *)buf, size, 0);
+    } while (len == -1 && socket_error() == EINTR);
+
+    if (len == -1)
+        len = -socket_error();
+
+    /*
+     * need ssl op here
+     */
+
+    return len;
+}
+
+static int socket_close_ssl(void *opaque)
+{
+    QEMUFileSocket *s = opaque;
+    qemu_free(s);
+    return 0;
+}
+
 static int socket_get_buffer(void *opaque, uint8_t *buf, int64_t pos, int size)
 {
     QEMUFileSocket *s = opaque;
@@ -320,6 +349,20 @@ QEMUFile *qemu_fdopen(int fd, const char *mode)
 fail:
     qemu_free(s);
     return NULL;
+}
+
+/*
+ * classicsong
+ * receive side buffer handler with ssl
+ */
+QEMUFile *qemu_fopen_socket_ssl(int fd)
+{
+    QEMUFileSocket *s = qemu_mallocz(sizeof(QEMUFileSocket));
+
+    s->fd = fd;
+    s->file = qemu_fopen_ops(s, NULL, socket_get_buffer_ssl, socket_close_ssl, 
+			     NULL, NULL, NULL);
+    return s->file;
 }
 
 QEMUFile *qemu_fopen_socket(int fd)
@@ -1062,6 +1105,8 @@ typedef struct SaveStateEntry {
     void *opaque;
     CompatEntry *compat;
     int no_migrate;
+    uint32_t *version_queue;
+    int total_size;
 } SaveStateEntry;
 
 
@@ -1371,6 +1416,7 @@ void vmstate_save_state(QEMUFile *f, const VMStateDescription *vmsd,
 {
     VMStateField *field = vmsd->fields;
 
+    fprintf("vmstate_save new style %s\n", field->name);
     if (vmsd->pre_save) {
         vmsd->pre_save(opaque);
     }
@@ -1610,11 +1656,15 @@ int qemu_savevm_state_iterate(Monitor *mon, QEMUFile *f)
     return 0;
 }
 
-//classicsong
+/*
+ * classicsong
+ * copy from qemu_savevm_state_complete
+ */
 int 
 qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f) {
     SaveStateEntry *se;
 
+    DPRINTF("qemu_savevm_nolive_state\n");
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
         int len;
 
@@ -1832,6 +1882,50 @@ typedef struct LoadStateEntry {
 
 struct FdMigrationDestState *dest_state;
 
+//classicsong
+void 
+slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers) {
+    LoadStateEntry *le, *new_le;
+    uint8_t section_type;
+    unsigned int v;
+    int ret;
+    struct migration_task_queue *task_queue;
+
+    while ((section_type = qemu_get_byte(f)) != QEMU_VM_EOF) {
+        /*
+         * start modifying here tomorrow
+         */
+        switch (section_type) {
+        case QEMU_VM_SECTION_PART:
+        case QEMU_VM_SECTION_END:
+            section_id = qemu_get_be32(f);
+
+            QLIST_FOREACH(le, &loadvm_handlers, entry) {
+                if (le->section_id == section_id) {
+                    break;
+                }
+            }
+            if (le == NULL) {
+                fprintf(stderr, "Unknown savevm section %d\n", section_id);
+                ret = -EINVAL;
+                goto out;
+            }
+
+            /*
+             * ram use ram_load
+             * disk use block_load
+             */
+            ret = vmstate_load(f, le->se, le->version_id);
+            if (ret < 0) {
+                fprintf(stderr, "qemu: warning: error while loading state section id %d\n",
+                        section_id);
+                goto out;
+            }
+            break;
+        }
+    }
+}
+
 int qemu_loadvm_state(QEMUFile *f)
 {
     QLIST_HEAD(, LoadStateEntry) loadvm_handlers =
@@ -1840,7 +1934,6 @@ int qemu_loadvm_state(QEMUFile *f)
     uint8_t section_type;
     unsigned int v;
     int ret;
-    struct migration_task_queue *task_queue;
 
     if (qemu_savevm_state_blocked(default_mon)) {
         return -EINVAL;
@@ -1949,7 +2042,7 @@ int qemu_loadvm_state(QEMUFile *f)
                 int len = qemu_get_be32(f);
 
                 qemu_get_buffer(f, ip_buf, len);
-                tid = create_dest_slave(ip_buf, ssl_type);
+                tid = create_dest_slave(ip_buf, ssl_type, &loadvm_handlers);
                 struct migration_slave *slave = (struct migration_slave *)malloc(sizeof(struct migration_slave));
                 slave->tid = tid;
                 slave->next = slave_list;

@@ -124,7 +124,7 @@ static void buffered_flush(QEMUFileBuffered *s)
 
 /*
  * classicsong
- * need rate_control here
+ * have rate_control here
  */
 static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t pos, int size)
 {
@@ -290,7 +290,6 @@ static int buffered_put_buffer(void *opaque, const uint8_t *buf, int64_t pos, in
 }
 
 //classicsong
-
 static int buffered_close_slave(void *opaque)
 {
     QEMUFileBuffered *s = opaque;

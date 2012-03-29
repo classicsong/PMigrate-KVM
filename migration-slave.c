@@ -1,5 +1,7 @@
 #include "atomic.h"
 
+#define MULTI_TRY 10
+
 /*
  * host_port: the target connection ip:port
  */
@@ -17,7 +19,18 @@ FdMigrationStateSlave *tcp_start_outgoing_migration_slave(Monitor *mon,
     s = qemu_mallocz(sizeof(*s));
 
     s->get_error = socket_errno;//report socket error
-    s->write = socket_write;//write data to the target fd
+    
+    /*
+     * register SSL handler
+     */
+    if (SSL_type == SSL_NO)
+        s->write = socket_write;//write data to the target fd
+    else if (SSL_type == SSL_STRONG)
+        s->write = socket_write_ssl;
+    else {
+        fprintf("wrong ssl type use defult ssl solution");
+        s->write = socket_write;
+    }
     s->close = tcp_close;//close tcp connection
     s->mig_state.cancel = migrate_fd_cancel;//migartion cancel callback func
     s->mig_state.get_status = migrate_fd_get_status;//get current migration status
@@ -33,16 +46,39 @@ FdMigrationStateSlave *tcp_start_outgoing_migration_slave(Monitor *mon,
 void start_host_slave(void *data) {
     struct FdMigrationStateSlave *s = (struct FdMigrationStateSlave *)data;
     struct task_body *body;
-    int i;
+    struct sockaddr_in addr;
+    int sock;
+    int i, ret;
+
+    if (parse_host_port(&addr, s->dest_ip) < 0)
+        return NULL;
 
     /*
-     *      * create network connection
-     *           */
-    s->fd = socket(PF_INET, SOCK_STREAM, 0);
+     * create network connection
+     */
+    s->fd = qemu_socket(PF_INET, SOCK_STREAM, 0);
     if (s->fd == -1) {
         qemu_free(s);
         return NULL;
-    } 
+    }
+
+    socket_set_nonblock(s->fd);
+    
+    for (i = 0; i < MULTI_TRY; i++) {
+        if (connect(s->fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+
+            ret = s->get_error(s);
+            if (ret == EINVAL) {
+                fprintf("slave network connection param error %s:%d\n", s->dest_ip, ret);
+                return;
+            }
+
+            usleep(1000);
+            continue;
+        }
+
+        break;
+    }
 
     /*
      * create file ops
@@ -51,8 +87,8 @@ void start_host_slave(void *data) {
                                       s->bandwidth_limit,
                                       migrate_fd_put_buffer_slave,
                                       migrate_fd_put_ready_slave,
-                                      migrate_fd_wait_for_unfreeze_slave,
-                                      migrate_fd_close_slave);
+                                      migrate_fd_wait_for_unfreeze,
+                                      migrate_fd_close);
 
     pthread_barrier_wait(&s->sender_barr.sender_iter_barr);
 
@@ -72,7 +108,7 @@ void start_host_slave(void *data) {
              * handle disk
              */
             for (i = 0; i < body->len; i++) {
-                disk_save_block_slave(body->ptr, body->iter_num, s->file);
+                disk_save_block_slave(body->ptr, body->iter_num, s->file, s-disk_task_queue->iter_num);
             }
 
             /* End of the single task */
@@ -86,7 +122,8 @@ void start_host_slave(void *data) {
             qemu_put_be32(f, s->mem_task_queue->section_id);
 
             for (i = 0; i < body->len; i++) {
-                ram_save_block_slave(body->pages[i].ptr, body->pages[i].cont, s);
+                ram_save_block_slave(body->pages[i].addr, body->pages[i].ptr, 
+                                     body->pages[i].cont, s, s->mem_task_queue->iter_num);
             }
 
             /* End of the single task */
@@ -125,6 +162,7 @@ void init_host_slaves(struct FdMigrationState *s) {
         char *host_ip = s->para_config->host_ip_list[i];
         char *dest_ip = s->para_config->dest_ip_list[i];
         int ssl_type = s->para_config->SSL_type;
+
         slave_s = tcp_start_outgoing_migration_slave(s->mon, host_ip, 
                                                      dest_ip, s->bandwidth_limit,
                                                      detach, ssl_type);
@@ -139,6 +177,7 @@ void init_host_slaves(struct FdMigrationState *s) {
 struct dest_slave_para{
     char *listen_ip;
     int ssl_type;
+    void *handlers;
 };
 
 int slave_loadvm_state() {
@@ -154,12 +193,22 @@ void start_dest_slave(void *data) {
     socklen_t addrlen = sizeof(addr);
     int fd;
     int con_fd;
+    int val;
+
+    if (parse_host_port(&addr, para->listen_ip) < 0) {
+        fprintf(stderr, "invalid host/port combination: %s\n", para->listen_ip);
+        return;
+    }
+
     /*
      * create connection
      */
-    fd = socket(PF_INET, SOCK_STREAM, 0);
+    fd = qemu_socket(PF_INET, SOCK_STREAM, 0);
     if (s == -1)
         return -socket_error();
+
+    val = 1;
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&val, sizeof(val));
 
     if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
         goto err;
@@ -168,19 +217,53 @@ void start_dest_slave(void *data) {
         goto err;
 
     do {
-        con_fd = accept(fd, (struct sockaddr *)&addr, &addrlen);
+        con_fd = qemu_accept(fd, (struct sockaddr *)&addr, &addrlen);
     } while (con_fd == -1 && socket_error() == EINTR);
 
     /*
      * wait for further commands
      */
+    DPRINTF("accepted migration\n");
+
+    if (con_fd == -1) {
+        fprintf(stderr, "could not accept migration connection\n");
+        goto out;
+    }
+
+    if (para->ssl_type == SSL_NO)
+        f = qemu_fopen_socket(con_fd);
+    else if (para_ssl_type == SSL_STRONG)
+        f = qemu_fopen_socket_ssl(con_fd);
+    else {
+        fprintf("wrong ssl type use defult ssl solution");
+        f = qemu_fopen_socket(con_fd);
+    }
+            
+    if (f == NULL) {
+        fprintf(stderr, "could not qemu_fopen socket\n");
+        goto out2;
+    }
+
+    /*
+     * slave handle incoming data
+     */
+    slave_process_incoming_migration(f, para->handlers);
+
+    slave_loadvm_state();
+
+ err2:
+    close(con_fd);
+ err:
+    close(fd);
+    return;
 }
 
-pthread_t create_dest_slave(char *listen_ip, int ssl_type) {
+pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers) {
     struct dest_slave_para *data;
     pthread_t tid;
     data->listen_ip = listen_ip;
     data->ssl_type = ssl_type;
+    data->handlers = loadvm_handlers;
     pthread_create(&tid, NULL, start_dest_slave, data);
 
     return tid;

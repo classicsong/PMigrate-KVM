@@ -23,6 +23,7 @@ struct parallel_param {
     int num_slaves;
     int max_iter;
     int max_factor;
+	int max_downtime;
 };
 
 extern struct parallel_param *parse_file(char *file);

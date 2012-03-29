@@ -327,11 +327,6 @@ ssize_t migrate_fd_put_buffer_slave(void *opaque, const void *data, size_t size)
     FdMigrationStateSlave *s = opaque;
     ssize_t ret;
 
-    /*
-     * classicsong
-     * need to handle ssl here
-     */
-
     do {
         ret = s->write(s, data, size);
     } while (ret == -1 && ((s->get_error(s)) == EINTR));

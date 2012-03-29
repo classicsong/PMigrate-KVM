@@ -34,6 +34,20 @@ static int socket_errno(FdMigrationState *s)
     return socket_error();
 }
 
+/*
+ * classicsong add ssl op here
+ */
+static int socket_write_ssl(FdMigrationState *s, const void * buf, size_t size)
+{
+    return send(s->fd, buf, size, 0);
+}
+
+
+static int socket_write(FdMigrationState *s, const void * buf, size_t size)
+{
+    return send(s->fd, buf, size, 0);
+}
+
 static int socket_write(FdMigrationState *s, const void * buf, size_t size)
 {
     return send(s->fd, buf, size, 0);

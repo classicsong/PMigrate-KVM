@@ -5,107 +5,103 @@
 #include "read_config.h"
 #include "para-config.h"
 
-struct parallel_param *parse_file(char *file) {
-    struct parallel_param *para_config;
-	cfg_list *list = NULL;
-	str_list *s_list = NULL;
+/* Init Parallel Param */
+static void init_param(struct parallel_param *param) {
+	param->SSL_type = 0;
+	param->host_ip_list = NULL;
+	param->dest_ip_list = NULL;
+    param->num_slaves = 0;
+    param->num_ips = 0;
+    param->max_iter = DEFAULT_MAX_ITER;
+    param->max_factor = DEFAULT_MAX_FACTOR;
+    param->max_downtime = DEFAULT_MAX_DOWNTIME;
+}
+
+/* Get Number from List */
+static int get_one_num(char *name, cfg_list *list, int *value, char* error) {
 	num_list *n_list = NULL;
-
-	init_config();
-	read_cfg_file(file, &list);
-
-    para_config = (struct parallel_param *)malloc(sizeof(struct parallel_param));
-	para_config->SSL_type = 0;
-	para_config->host_ip_list = NULL;
-	para_config->dest_ip_list = NULL;
-    para_config->num_slaves = 0;
-    para_config->num_ips = 0;
-    para_config->max_iter = DEFAULT_MAX_ITER;
-    para_config->max_factor = DEFAULT_MAX_FACTOR;
-    //para_config->max_downtime = DEFAULT_MAX_DOWNTIME;
-
-    //SSL type
-	if ( (n_list = get_num_list("SSL_type", list)) == NULL ) {
-		perror("SSL_type error");
-		goto error;
+	if ( (n_list = get_num_list(name, list)) == NULL ) {
+		perror(error);
+		return -1;
 	} else {
-		para_config->SSL_type = n_list->integer;
+		*value= n_list->integer;
 	}
+	return 0;
+}
 
-	//Host IP
-	if ( (s_list = get_str_list("h_ip", list)) == NULL ) {
-		perror("Host ip error");
-		goto error;
+/* Get IP Strings from List */
+static int get_multi_ip(char *name, cfg_list *list, struct ip_list **ip, char *error) {
+	str_list *s_list = NULL;
+	if ( (s_list = get_str_list(name, list)) == NULL ) {
+		perror(error);
+		return -1;
 	} else {
 		for (;s_list != NULL; s_list = s_list->next) {
 			struct ip_list *host = (struct ip_list*) calloc(sizeof(struct ip_list), 1); 
 			host->host_port = s_list->string;
 			host->len = strlen(s_list->string);
-			if (!para_config->host_ip_list) {
-				para_config->host_ip_list = host;
+			if (!(*ip)) {
+				*ip = host;
 			} else {
-				host->next = para_config->host_ip_list->next;
-				para_config->host_ip_list->next = host;
+				host->next = (*ip)->next;
+				(*ip)->next = host;
 			}
 		}
 	}
+	return 0;
+}
+
+/* Parse Configure File Main Function */
+struct parallel_param *parse_file(char *file) {
+    struct parallel_param *para_config;
+	cfg_list *list = NULL;
+
+	init_config();
+	read_cfg_file(file, &list);
+
+    para_config = (struct parallel_param *)malloc(sizeof(struct parallel_param));
+	init_param(para_config);
+
+    //SSL type
+	if (get_one_num("SSL_type", list, &para_config->SSL_type, "SSL_type error") < 0)
+		goto error;
+
+	//Host IP
+	if (get_multi_ip("h_ip", list, &para_config->host_ip_list, "Host ip error") < 0)
+		goto error;
 
 	// Dest IP
-	if ( (s_list = get_str_list("d_ip", list)) == NULL ) {
-		perror("Dest ip error");
+	if (get_multi_ip("d_ip", list, &para_config->dest_ip_list, "Dest ip error") < 0)
 		goto error;
-	} else {
-		for (;s_list != NULL; s_list = s_list->next) {
-			struct ip_list *host= (struct ip_list*) calloc(sizeof(struct ip_list), 1); 
-			host->host_port = s_list->string;
-			host->len = strlen(s_list->string);
-			if (!para_config->dest_ip_list) {
-				para_config->dest_ip_list = host;
-			} else {
-				host->next = para_config->dest_ip_list->next;
-				para_config->dest_ip_list->next = host;
-			}
-		}
-	}
 	
 	// Number Ips 
-	if ( (n_list = get_num_list("ip_num", list)) == NULL ) {
-		perror("ip_num");
+	if (get_one_num("ip_num", list, &para_config->num_ips, "ip_num error") < 0)
 		goto error;
-	} else {
-		para_config->num_ips = n_list->integer;
-	}
+	
 	
 	// Number Slaves
-	if ( (n_list = get_num_list("slave_num", list)) == NULL ) {
-		perror("slave_num");
+	if (get_one_num("slave_num", list, &para_config->num_slaves, "slave_num error") < 0)
 		goto error;
-	} else {
-		para_config->num_slaves = n_list->integer;
-	}
 
 	// Max Iteration
-	if ( (n_list = get_num_list("max_iter", list)) == NULL ) {
-		perror("max_iter");
+	if (get_one_num("max_iter", list, &para_config->max_iter, "max_iter error") < 0)
 		goto error;
-	} else {
-		para_config->max_iter = n_list->integer;
-	}
 	
 	// Max Factor
-	if ( (n_list = get_num_list("max_factor", list)) == NULL ) {
-		perror("max_factor");
+	if (get_one_num("max_factor", list, &para_config->max_factor, "max_factor error") < 0)
 		goto error;
-	} else {
-		para_config->max_factor = n_list->integer;
-	}
 	
+	// Max Downtime
+	if (get_one_num("max_downtime", list, &para_config->max_downtime, "max_downtime error") < 0)
+		goto error;
+
     return para_config;
 error:
 	free(para_config);
 	return NULL;
 }
 
+/* See what's going on Parallel Param for debug */
 int reveal_param(struct parallel_param *param) {
 	struct ip_list *list;
 	printf("SSL_type: %d\n", param->SSL_type);
@@ -113,6 +109,7 @@ int reveal_param(struct parallel_param *param) {
 	printf("num_slaves: %d\n", param->num_slaves);
 	printf("max_iter: %d\n", param->max_iter);
 	printf("max_factor: %d\n", param->max_factor);
+	printf("max_downtime: %d\n", param->max_downtime);
 
 	printf("host_ip_list:\n");
 	for (list = param->host_ip_list; list != NULL; list = list->next) {

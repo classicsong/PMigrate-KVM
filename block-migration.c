@@ -702,6 +702,9 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
         bmds->cur_dirty = sector;
     }
 
+    if (queue_push_task(task_queue, body) < 0)
+        fprintf(stderr, "Enqueue task error\n");
+
     return data_sent;
 }
 

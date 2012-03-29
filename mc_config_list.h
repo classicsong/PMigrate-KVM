@@ -5,3 +5,4 @@ c_each("ip_num", NUMBER);
 c_each("slave_num", NUMBER);
 c_each("max_iter", NUMBER);
 c_each("max_factor", NUMBER);
+c_each("max_downtime", NUMBER);

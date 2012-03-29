@@ -26,6 +26,7 @@ struct task_body {
         struct {
             uint8_t *ptr;
             int cont;
+            ram_addr_t addr;
         } pages[DEFAULT_MEM_BATCH_LEN];
         struct {
             char *ptr;
