@@ -124,6 +124,16 @@ static void buffered_flush(QEMUFileBuffered *s)
 
 /*
  * classicsong
+ * get time delta
+ */
+static uint64_t 
+tv_delta(struct timeval *new, struct timeval *old) {
+    return (((new->tv_sec - old->tv_sec) * 1000000) + 
+            (new->tv_usec - old->tv_usec));
+}
+
+/*
+ * classicsong
  * have rate_control here
  */
 static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t pos, int size)
@@ -172,7 +182,7 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
                 delta = tv_delta(&now, &s->last_put);
                 while (delta > s->burst_time_us) {
                     s->budget += BURST_BUDGET;
-                    last_put.tv_usec += burst_time_us;
+                    s->last_put.tv_usec += s->burst_time_us;
                     if (s->last_put.tv_usec > 1000000) {
                         s->last_put.tv_usec -= 1000000;
                         s->last_put.tv_sec++;
@@ -180,7 +190,7 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
 
                     delta -= s->burst_time_us;
                 }
-                if (s->burst_budget > 0)
+                if (s->budget > 0)
                     break;
 
                 delay.tv_sec = 0;
@@ -395,12 +405,13 @@ static void buffered_rate_tick(void *opaque)
     s->put_ready(s->opaque);
 }
 
-QEMUFile *qemu_fopen_ops_buffered_slave(void *opaque,
-                                        size_t bytes_per_sec,
-                                        BufferedPutFunc *put_buffer,
-                                        BufferedPutReadyFunc *put_ready,
-                                        BufferedWaitForUnfreezeFunc *wait_for_unfreeze,
-                                        BufferedCloseFunc *close)
+QEMUFile *
+qemu_fopen_ops_buffered_slave(void *opaque,
+                              size_t bytes_per_sec,
+                              BufferedPutFunc *put_buffer,
+                              BufferedPutReadyFunc *put_ready,
+                              BufferedWaitForUnfreezeFunc *wait_for_unfreeze,
+                              BufferedCloseFunc *close)
 {
     QEMUFileBuffered *s;
 
@@ -414,7 +425,8 @@ QEMUFile *qemu_fopen_ops_buffered_slave(void *opaque,
     s->close = close;
     s->budget = 0;
     s->burst_time_us = -1;
-    s->last_put = 0;
+    s->last_put.tv_sec = 0;
+    s->last_put.tv_usec = 0;
 
     s->file = qemu_fopen_ops(s, buffered_put_buffer_slave, NULL,
                              buffered_close_slave, buffered_rate_limit,

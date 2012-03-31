@@ -1503,9 +1503,11 @@ bool qemu_savevm_state_blocked(Monitor *mon)
     return false;
 }
 
-int qemu_migrate_savevm_state_begin(FdMigrationState *s, Monitor *mon, QEMUFile *f, 
+int 
+qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f, 
                                     int blk_enable, int shared)
 {
+    FdMigrationState *s = (FdMigrationState *)opaque;
     SaveStateEntry *se;
 
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
@@ -1925,6 +1927,8 @@ slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers) {
         }
     }
 }
+
+extern pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers);
 
 int qemu_loadvm_state(QEMUFile *f)
 {

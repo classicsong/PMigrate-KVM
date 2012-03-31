@@ -85,7 +85,7 @@ void qemu_savevm_state_cancel(Monitor *mon, QEMUFile *f);
 int qemu_loadvm_state(QEMUFile *f);
 
 //classicsong
-int qemu_migrate_savevm_state_begin(FdMigrationState *s, Monitor *mon, QEMUFile *f, 
+int qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f, 
                                     int blk_enable, int shared);
 
 

@@ -1,6 +1,14 @@
 #include <stdio.h>
 
+#include "qemu-common.h"
+#include "qemu_socket.h"
 #include "migration.h"
+#include "qemu-char.h"
+#include "sysemu.h"
+#include "buffered_file.h"
+#include "block.h"
+
+extern void host_memory_master(void *data);
 
 void 
 host_memory_master(void *data) {
@@ -8,15 +16,14 @@ host_memory_master(void *data) {
     unsigned long total_sent = 0;
     //unsigned long sent_this_iter = 0, sent_last_iter = 0;
     unsigned long memory_size = ram_bytes_total();
-    int num_slaves = s->num_slaves;
     unsigned long data_remaining;
     unsigned long bwidth;
 
     /*
      * wait for all slaves and master to be ready
      */
-    pthread_barrier_wait(&(s->sender_barr.sender_iter_barr));
-    s->sender_barr.mem_state = BARR_STATE_ITER_START;
+    pthread_barrier_wait(&(s->sender_barr->sender_iter_barr));
+    s->sender_barr->mem_state = BARR_STATE_ITER_START;
 
     /*
      * Get dirty bitmap first
@@ -45,8 +52,8 @@ host_memory_master(void *data) {
         /*
          * add barrier here to sync for iterations
          */
-        s->sender_barr.mem_state = BARR_STATE_ITER_END;
-        pthread_barrier_wait(&s->sender_barr.sender_iter_barr);
+        s->sender_barr->mem_state = BARR_STATE_ITER_END;
+        pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
 
         /*
          * sync_dirty_bitmap in iteration for the next iter
@@ -81,14 +88,14 @@ host_memory_master(void *data) {
         s->mem_task_queue->bwidth = bwidth;
         s->mem_task_queue->data_remaining = data_remaining;
 
-        if (!pthread_mutex_trylock(&s->sender_barr.master_lock)) {
+        if (!pthread_mutex_trylock(&s->sender_barr->master_lock)) {
             /*
              * get lock fill memory info
              */
             DPRINTF("Iter [%d:%d], memory_remain %ld, bwidth %ld\n", 
                     s->mem_task_queue->iter_num, iter_num,
                     data_remaining, bwidth);
-            pthread_mutex_unlock(&s->sender_barr.master_lock)
+            pthread_mutex_unlock(&s->sender_barr->master_lock)
         }
         else {
             int total_expected_downtime;
@@ -98,7 +105,7 @@ host_memory_master(void *data) {
              * failed to get lock first
              * check for disk info
              */
-            pthread_mutex_lock(&s->sender_barr.master_lock);
+            pthread_mutex_lock(&s->sender_barr->master_lock);
 
             total_expected_downtime = (s->mem_task_queue->data_remaining + s->disk_task_queue->data_remaining)/
                 (s->mem_task_queue->bwidth + s->disk_task_queue->bwidth);
@@ -116,10 +123,10 @@ host_memory_master(void *data) {
                 s->disk_task_queue->force_end == 1 ||
                 s->mem_task_queue->force_end == 1)
                 s->laster_iter =1;
-            pthread_mutex_unlock(&s->sender_barr.master_lock)
+            pthread_mutex_unlock(&s->sender_barr->master_lock)
         }
 
-        pthread_barrier_wait(&s->sender_barr.next_iter_barr);
+        pthread_barrier_wait(&s->sender_barr->next_iter_barr);
 
         //total iteration number count
         iter_num++;
@@ -177,18 +184,26 @@ host_disk_master(void * data) {
     unsigned long total_sent = 0;
     //unsigned long sent_this_iter = 0, sent_last_iter = 0;
     unsigned long disk_size = block_mig_state.total_sector_sum * BDRV_SECTOR_SIZE;
-    int num_slaves = s->num_slaves;
     unsigned long data_remaining;
     unsigned long bwidth;
     Monitor *mon = s->mon;
+
+
+    /*
+     * no need for disk migration
+     */
+    if (s->mig_state.blk == 0) {
+        fprintf(stderr, "Does not support memory only version here\n");
+        return;
+    }
 
     DPRINTF("The default disk size is %lx\n", disk_size);
 
     /*
      * wait for all slaves and master to be ready
      */
-    pthread_barrier_wait(&(s->sender_barr.sender_iter_barr));
-    s->sender_barr.disk_state = BARR_STATE_ITER_START;
+    pthread_barrier_wait(&(s->sender_barr->sender_iter_barr));
+    s->sender_barr->disk_state = BARR_STATE_ITER_START;
 
     /* Enable dirty disk tracking */
     set_dirty_tracking(1);
@@ -218,8 +233,8 @@ host_disk_master(void * data) {
         /*
          * add barrier here to sync for iterations
          */
-        s->sender_barr.disk_state = BARR_STATE_ITER_END;
-        pthread_barrier_wait(&s->sender_barr.sender_iter_barr);
+        s->sender_barr->disk_state = BARR_STATE_ITER_END;
+        pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
 
         /*
          * the dirty bitmap is reset in mig_save_device_dirty 
@@ -250,14 +265,14 @@ host_disk_master(void * data) {
         s->disk_task_queue->bwidth = bwidth;
         s->disk_task_queue->data_remaining = data_remaining;
 
-        if (!pthread_mutex_trylock(&s->sender_barr.master_lock)) {
+        if (!pthread_mutex_trylock(&s->sender_barr->master_lock)) {
             /*
              * get lock fill disk info
              */
             DPRINTF("Iter [%d:%d], disk_remain %ld, bwidth %ld\n", 
                     s->disk_task_queue->iter_num,
                     iter_num, data_remaining, bwidth);
-            pthread_mutex_unlock(&s->sender_barr.master_lock)
+            pthread_mutex_unlock(&s->sender_barr->master_lock)
         }
         else {
             int total_expected_downtime;
@@ -267,7 +282,7 @@ host_disk_master(void * data) {
              * failed to get lock first
              * check for disk info
              */
-            pthread_mutex_lock(&s->sender_barr.master_lock);
+            pthread_mutex_lock(&s->sender_barr->master_lock);
 
             total_expected_downtime = (s->mem_task_queue->data_remaining + s->disk_task_queue->data_remaining)/
                 (s->mem_task_queue->bwidth + s->disk_task_queue->bwidth);
@@ -285,10 +300,10 @@ host_disk_master(void * data) {
                 s->disk_task_queue->force_end == 1 ||
                 s->mem_task_queue->force_end == 1)
                 s->laster_iter =1;
-            pthread_mutex_unlock(&s->sender_barr.master_lock)
+            pthread_mutex_unlock(&s->sender_barr->master_lock)
         }
 
-        pthread_barrier_wait(&s->sender_barr.next_iter_barr);
+        pthread_barrier_wait(&s->sender_barr->next_iter_barr);
 
         //total iteration number count
         iter_num++;

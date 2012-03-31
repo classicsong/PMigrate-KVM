@@ -39,7 +39,7 @@
 #define DISK_NEGOTIATE                 0x3f
 
 
-//#define DEBUG_BLK_MIGRATION
+#define DEBUG_BLK_MIGRATION
 
 #ifdef DEBUG_BLK_MIGRATION
 #define DPRINTF(fmt, ...) \

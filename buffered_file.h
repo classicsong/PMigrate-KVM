@@ -27,4 +27,11 @@ QEMUFile *qemu_fopen_ops_buffered(void *opaque, size_t xfer_limit,
                                   BufferedWaitForUnfreezeFunc *wait_for_unfreeze,
                                   BufferedCloseFunc *close);
 
+QEMUFile *
+qemu_fopen_ops_buffered_slave(void *opaque,
+                              size_t bytes_per_sec,
+                              BufferedPutFunc *put_buffer,
+                              BufferedPutReadyFunc *put_ready,
+                              BufferedWaitForUnfreezeFunc *wait_for_unfreeze,
+                              BufferedCloseFunc *close);
 #endif

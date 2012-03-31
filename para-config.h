@@ -3,7 +3,7 @@
 
 struct ip_list {
     struct ip_list *next;
-    const char *host_port;
+    char *host_port;
     int len;
 };
 

@@ -1,6 +1,7 @@
 #include "para-config.h"
 
-void qemu_savevm_state_negotiate(FdMigrationState *s, QEMUFile *f) {
+void 
+qemu_savevm_state_negotiate(FdMigrationState *s, QEMUFile *f) {
     int num_ips = s->para_config.num_ips;
     struct ip_list *tmp_ip_list = s->para_config.dest_ip_list;
     int i;
@@ -24,7 +25,8 @@ void qemu_savevm_state_negotiate(FdMigrationState *s, QEMUFile *f) {
     qemu_flush(f);
 }
 
-struct parallel_param *default_config(const char *host_port) {
+struct parallel_param *
+default_config(const char *host_port) {
     struct parallel_param *para_config = (struct parallel_param *)malloc(sizeof(struct parallel_param));
     struct ip_list *dest = (struct ip_list *)malloc(sizeof(struct ip_list));
     dest->host_port = host_port;
@@ -38,7 +40,8 @@ struct parallel_param *default_config(const char *host_port) {
     para_config->host_ip_list = NULL;
 }
 
-void parse_migration_config_file(FdMigrationState *s, char *f, const char *host_port) {
+void 
+parse_migration_config_file(FdMigrationState *s, const char *f, const char *host_port) {
     struct parallel_param *param = parse_file(f);
 
     if (param == NULL)

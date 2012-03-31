@@ -20,7 +20,7 @@
 
 //classicsong
 #include "para-config.h"
-#include "migr_task.h"
+#include "migr-task.h"
 
 #define MIG_STATE_ERROR		-1
 #define MIG_STATE_COMPLETED	0
@@ -41,12 +41,6 @@ struct MigrationState
 
 typedef struct FdMigrationState FdMigrationState;
 typedef struct FdMigrationStateSlave FdMigrationStateSlave;
-
-struct migration_slave
-{
-    struct migration_slave *next;
-    pthread_t tid;
-};
 
 #define MEMORY_MASTER 1
 #define DISK_MASTER 2
@@ -75,7 +69,7 @@ struct FdMigrationState
     struct migration_task_queue *disk_task_queue;
     struct migration_slave *slave_list;
     struct migration_master *master_list;
-    struct migration_barrier sender_barr;
+    struct migration_barrier *sender_barr;
     pthread_barrier_t last_barr;
     volatile int laster_iter;
     int section_id;
@@ -85,9 +79,9 @@ struct FdMigrationDestState
 {
     struct migration_slave *slave_list;
     struct migration_task_queue *task_queue;
-}
+};
 
-struct FdMigrationSlaveState
+struct FdMigrationStateSlave
 {
     MigrationState mig_state;
     int64_t bandwidth_limit;
@@ -95,15 +89,17 @@ struct FdMigrationSlaveState
     int fd;
     Monitor *mon;
     int state;
-    int (*get_error)(struct FdMigrationState*);
-    int (*close)(struct FdMigrationState*);
-    int (*write)(struct FdMigrationState*, const void *, size_t);
+    int (*get_error)(struct FdMigrationStateSlave*);
+    int (*close)(struct FdMigrationStateSlave*);
+    int (*write)(struct FdMigrationStateSlave*, const void *, size_t);
     void *opaque;
-#    SSL_func;
+    //    SSL_func;
     char *host_ip;
     char *dest_ip;
-    struct migration_task *task_queue;
-}
+    struct migration_task_queue *mem_task_queue;
+    struct migration_task_queue *disk_task_queue;
+    struct migration_barrier *sender_barr;
+};
 
 void process_incoming_migration(QEMUFile *f);
 
@@ -168,6 +164,10 @@ void migrate_fd_error(FdMigrationState *s);
 int migrate_fd_cleanup(FdMigrationState *s);
 
 void migrate_fd_put_notify(void *opaque);
+
+//classicsong
+void migrate_fd_put_ready_slave(void *opaque);
+ssize_t migrate_fd_put_buffer_slave(void *opaque, const void *data, size_t size);
 
 ssize_t migrate_fd_put_buffer(void *opaque, const void *data, size_t size);
 

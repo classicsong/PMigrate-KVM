@@ -19,7 +19,10 @@
 #include "buffered_file.h"
 #include "block.h"
 
-//#define DEBUG_MIGRATION_TCP
+//classicsong
+#include "migration-negotiate.h"
+
+#define DEBUG_MIGRATION_TCP
 
 #ifdef DEBUG_MIGRATION_TCP
 #define DPRINTF(fmt, ...) \
@@ -29,23 +32,10 @@
     do { } while (0)
 #endif
 
+//classicsong make it none static
 static int socket_errno(FdMigrationState *s)
 {
     return socket_error();
-}
-
-/*
- * classicsong add ssl op here
- */
-static int socket_write_ssl(FdMigrationState *s, const void * buf, size_t size)
-{
-    return send(s->fd, buf, size, 0);
-}
-
-
-static int socket_write(FdMigrationState *s, const void * buf, size_t size)
-{
-    return send(s->fd, buf, size, 0);
 }
 
 static int socket_write(FdMigrationState *s, const void * buf, size_t size)

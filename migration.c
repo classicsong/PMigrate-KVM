@@ -21,7 +21,7 @@
 #include "block-migration.h"
 #include "qemu-objects.h"
 
-//#define DEBUG_MIGRATION
+#define DEBUG_MIGRATION
 
 #ifdef DEBUG_MIGRATION
 #define DPRINTF(fmt, ...) \
@@ -317,13 +317,13 @@ void migrate_fd_put_notify(void *opaque)
     qemu_file_put_notify(s->file);
 }
 
-ssize_t migrate_fd_put_ready_slave(void *opaque, const void *data, size_t size) {
+void 
+migrate_fd_put_ready_slave(void *opaque) {
     fprintf(stderr, "error calling put_ready\n");
-    return -1;
 }
 
-ssize_t migrate_fd_put_buffer_slave(void *opaque, const void *data, size_t size)
-{
+ssize_t 
+migrate_fd_put_buffer_slave(void *opaque, const void *data, size_t size) {
     FdMigrationStateSlave *s = opaque;
     ssize_t ret;
 
@@ -335,7 +335,7 @@ ssize_t migrate_fd_put_buffer_slave(void *opaque, const void *data, size_t size)
         ret = -(s->get_error(s));
 
     if (ret == -EAGAIN) {
-        fprintf("error write data\n");
+        fprintf(stderr, "error write data\n");
         //qemu_set_fd_handler2(s->fd, NULL, NULL, migrate_fd_put_notify, s);
     } else if (ret < 0) {
         if (s->mon) {
@@ -373,6 +373,8 @@ ssize_t migrate_fd_put_buffer(void *opaque, const void *data, size_t size)
     return ret;
 }
 
+void migrate_fd_put(void *opaque);
+
 void migrate_fd_connect(FdMigrationState *s)
 {
     int ret;
@@ -405,9 +407,13 @@ void migrate_fd_connect(FdMigrationState *s)
     migrate_fd_put(s);
 }
 
-void migrate_fd_put(void *opaque)
-{
+extern int qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f);
+
+void 
+migrate_fd_put(void *opaque) {
     FdMigrationState *s = opaque;
+    int old_vm_running = vm_running;
+    int state;
 
     if (s->state != MIG_STATE_ACTIVE) {
         DPRINTF("put_ready returning because of non-active state\n");
