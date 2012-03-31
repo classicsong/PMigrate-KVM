@@ -646,8 +646,12 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
              * curr_vnum set to 4 means current memory version is updated to 1
              * curr_vnum set to 3 means current memory is updating to 1
              */
-            if (curr_vnum > mem_vnum * 2)
-                continue;
+            if (curr_vnum > mem_vnum * 2) {
+	        /* the memory data is sent at host end so we must receive it */
+	        char buf[TARGET_PAGE_SIZE];
+	        qemu_get_buffer(f, buf, TARGET_PAGE_SIZE);
+	        continue;
+	    }
 
             /*
              * now we will hold the page

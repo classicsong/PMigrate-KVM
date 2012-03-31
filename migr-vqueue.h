@@ -23,4 +23,15 @@ release_page(uint32_t *v_p, uint32_t new_vnum) {
     *v_p = new_vnum * 2 + 2;
 }
 
+static int
+hold_block(uint32_t *v_p, uint32_t old_vnum, uint32_t new_vnum) {
+
+    return (atomic_compare_exchange32(v_p, old_vnum, new_vnum * 2 + 1) != old_vnum);
+}
+
+static void
+release_block(uint32_t *v_p, uint32_t new_vnum) {
+    *v_p = new_vnum * 2 + 2;
+}
+
 #endif

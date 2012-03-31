@@ -108,7 +108,7 @@ void start_host_slave(void *data) {
              * handle disk
              */
             for (i = 0; i < body->len; i++) {
-                disk_save_block_slave(body->ptr, body->iter_num, s->file, s-disk_task_queue->iter_num);
+	        disk_save_block_slave(body->ptr, body->iter_num, s->file);
             }
 
             /* End of the single task */
