@@ -97,7 +97,17 @@ const uint32_t arch_type = QEMU_ARCH;
  * mem_vnum
  */
 #define MEM_VNUM_OFFSET        6
-#define MEM_VNUM_MASK          (0x3f << MEM_VNUM_MASK)
+#define MEM_VNUM_MASK          (0x3f << MEM_VNUM_OFFSET)
+
+#define DEBUG_BLK_ARCH_INIT
+
+#ifdef DEBUG_BLK_ARCH_INIT
+#define DPRINTF(fmt, ...) \
+    do { printf("arch_init: " fmt, ## __VA_ARGS__); } while (0)
+#else
+#define DPRINTF(fmt, ...) \
+    do { } while (0)
+#endif
 
 static int is_dup_page(uint8_t *page, uint8_t ch)
 {
@@ -256,22 +266,27 @@ static void sort_ram_list(void)
 }
 
 
-int
-ram_save_block_slave(ram_addr_t offset, uint8_t *p, int cont, 
+void ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
+                         struct FdMigrationStateSlave *s, int mem_vnum);
+
+//classicsong
+void
+ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p, 
                      struct FdMigrationStateSlave *s, int mem_vnum) {
+    RAMBlock *block = (RAMBlock *)block_p;
     QEMUFile *f = s->file;
 
     if (is_dup_page(p, *p)) {
-        qemu_put_be64(f, offset | cont | RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
-        if (!cont) {
+        qemu_put_be64(f, offset | (block == NULL ? 1 : 0) | RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
+        if (block) {
             qemu_put_byte(f, strlen(block->idstr));
             qemu_put_buffer(f, (uint8_t *)block->idstr,
                             strlen(block->idstr));
         }
         qemu_put_byte(f, *p);
     } else {
-        qemu_put_be64(f, offset | cont | RAM_SAVE_FLAG_PAGE);
-        if (!cont) {
+        qemu_put_be64(f, offset | (block == NULL ? 1 : 0) | RAM_SAVE_FLAG_PAGE);
+        if (block) {
             qemu_put_byte(f, strlen(block->idstr));
             qemu_put_buffer(f, (uint8_t *)block->idstr,
                             strlen(block->idstr));
@@ -286,12 +301,13 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
     RAMBlock *last_block = NULL;
     ram_addr_t offset = 0;
     ram_addr_t current_addr;
-    int bytes_sent = 0;
-    struct task_body *body;
+    unsigned long bytes_sent = 0;
+    struct task_body *body = NULL;
     int body_len = 0;
 
     current_addr = block->offset + offset;
 
+    DPRINTF("Start ram_save_block_master\n");
     do {
         if (cpu_physical_memory_get_dirty(current_addr, MIGRATION_DIRTY_FLAG)) {
             uint8_t *p;
@@ -314,17 +330,16 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
              */
             if (body_len == 0) {
                 body = (struct task_body *)malloc(sizeof(struct task_body));
-                body->types = TASK_TYPE_MEM;
+                body->type = TASK_TYPE_MEM;
             }
 
             body->pages[body_len].ptr = p;
-            body->pages[body_len].cont = cont;
+            body->pages[body_len].block = (cont == 0 ? block : NULL);
             body->pages[body_len].addr = current_addr;
             body_len ++;
             body->iter_num = task_queue->iter_num;
 
             if (body_len == DEFAULT_MEM_BATCH_LEN) {
-                int ret;
                 body->len = body_len;
 
                 //finish one batch, for next batch, the RAM_SAVE_FLAG_CONTINUE should not be set
@@ -356,14 +371,19 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
      * handle last task this iteration
      */
     if (body_len > 0) {
-        int ret;
         body->len = body_len;
 
         if (queue_push_task(task_queue, body) < 0)
             fprintf(stderr, "Enqueue task error\n");
     }
+
+    return bytes_sent;
 }
 
+unsigned long ram_save_iter(int stage, struct migration_task_queue *task_queue, QEMUFile *f);
+extern void create_host_memory_master(void *opaque);
+
+//classicsong
 unsigned long
 ram_save_iter(int stage, struct migration_task_queue *task_queue, QEMUFile *f) {
     unsigned long bytes_transferred = 0;
@@ -372,10 +392,8 @@ ram_save_iter(int stage, struct migration_task_queue *task_queue, QEMUFile *f) {
     bytes_transferred = ram_save_block_master(task_queue);
     
     if (stage == 3) {
-        int bytes_sent;
-
         /* flush all remaining blocks regardless of rate limiting */ 
-        bytes_transferred = ram_save_block_master(s);
+        bytes_transferred = ram_save_block_master(task_queue);
         DPRINTF("Total memory sent last iter %ld\n", bytes_transferred);
         cpu_physical_memory_set_dirty_tracking(0);
     }
@@ -386,9 +404,6 @@ ram_save_iter(int stage, struct migration_task_queue *task_queue, QEMUFile *f) {
 int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque is FdMigrationState
 {
     ram_addr_t addr;
-    uint64_t bytes_transferred_last;
-    double bwidth = 0;
-    uint64_t expected_time = 0;
 
     if (stage < 0) {
         cpu_physical_memory_set_dirty_tracking(0);
@@ -438,6 +453,9 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
 
         return 0;
     }
+
+    DPRINTF("Only stage one can reach this function\n");
+    return -1;
 }
 
 static inline void *host_from_stream_offset(QEMUFile *f,
@@ -470,12 +488,12 @@ static inline void *host_from_stream_offset(QEMUFile *f,
     return NULL;
 }
 
+#include "savevm.h"
+
 int ram_load(QEMUFile *f, void *opaque, int version_id)
 {
     ram_addr_t addr;
     int flags;
-    struct task_body *task = NULL;
-    int num_pages;
     SaveStateEntry *se = (struct SaveStateEntry *)opaque;
 
     if (version_id < 3 || version_id > 4) {
@@ -493,7 +511,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
              * classicsong add version queue for memory
              * The queue length is equals to the number of pages guest VM has
              */
-            se->version_queue = (int *)calloc(sizeof(int) * (addr / TARGET_PAGE_SIZE));
+            se->version_queue = (uint32_t *)calloc(addr / TARGET_PAGE_SIZE, sizeof(uint32_t));
             se->total_size = addr / TARGET_PAGE_SIZE;
 
             if (version_id == 3) {
@@ -561,7 +579,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             }
 
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
-                fprintf("error host memory addr %x; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
+                fprintf(stderr, "error host memory addr %x; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
             vnum_p = &(se->version_queue[addr/TARGET_PAGE_SIZE]);
 
         re_check_press:
@@ -622,7 +640,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 host = host_from_stream_offset(f, addr, flags);
 
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
-                fprintf("error host memory addr %x; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
+                fprintf(stderr, "error host memory addr %x; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
             vnum_p = &(se->version_queue[addr/TARGET_PAGE_SIZE]);
 
         re_check_nor:
@@ -647,11 +665,11 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
              * curr_vnum set to 3 means current memory is updating to 1
              */
             if (curr_vnum > mem_vnum * 2) {
-	        /* the memory data is sent at host end so we must receive it */
-	        char buf[TARGET_PAGE_SIZE];
-	        qemu_get_buffer(f, buf, TARGET_PAGE_SIZE);
-	        continue;
-	    }
+                /* the memory data is sent at host end so we must receive it */
+                uint8_t buf[TARGET_PAGE_SIZE];
+                qemu_get_buffer(f, buf, TARGET_PAGE_SIZE);
+                continue;
+            }
 
             /*
              * now we will hold the page

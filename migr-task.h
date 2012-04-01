@@ -34,11 +34,11 @@ struct task_body {
     union {
         struct {
             uint8_t *ptr;
-            int cont;
             unsigned long addr;
+            void *block;
         } pages[DEFAULT_MEM_BATCH_LEN];
         struct {
-            char *ptr;
+            void *ptr;
         } blocks[DEFAULT_DISK_BATCH_LEN];
     };
     int iter_num;

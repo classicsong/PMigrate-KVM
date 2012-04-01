@@ -83,6 +83,20 @@
 #include "qemu_socket.h"
 #include "qemu-queue.h"
 
+//classicsong
+#include "migration-negotiate.h"
+
+//classicsong debug use
+#define DEBUG_MIGRATION_SAVEVM
+#ifdef DEBUG_MIGRATION_SAVEVM
+#define DPRINTF(fmt, ...) \
+    do { printf("savevm: " fmt, ## __VA_ARGS__); } while (0)
+#else
+#define DPRINTF(fmt, ...) \
+    do { } while (0)
+#endif
+
+
 #define SELF_ANNOUNCE_ROUNDS 5
 
 #ifndef ETH_P_RARP
@@ -1085,30 +1099,7 @@ const VMStateInfo vmstate_info_unused_buffer = {
     .put  = put_unused_buffer,
 };
 
-typedef struct CompatEntry {
-    char idstr[256];
-    int instance_id;
-} CompatEntry;
-
-typedef struct SaveStateEntry {
-    QTAILQ_ENTRY(SaveStateEntry) entry;
-    char idstr[256];
-    int instance_id;
-    int alias_id;
-    int version_id;
-    int section_id;
-    SaveSetParamsHandler *set_params;
-    SaveLiveStateHandler *save_live_state;
-    SaveStateHandler *save_state;
-    LoadStateHandler *load_state;
-    const VMStateDescription *vmsd;
-    void *opaque;
-    CompatEntry *compat;
-    int no_migrate;
-    uint32_t *version_queue;
-    int total_size;
-} SaveStateEntry;
-
+#include "savevm.h"
 
 static QTAILQ_HEAD(savevm_handlers, SaveStateEntry) savevm_handlers =
     QTAILQ_HEAD_INITIALIZER(savevm_handlers);
@@ -1416,10 +1407,11 @@ void vmstate_save_state(QEMUFile *f, const VMStateDescription *vmsd,
 {
     VMStateField *field = vmsd->fields;
 
-    fprintf("vmstate_save new style %s\n", field->name);
+    fprintf(stderr, "vmstate_save new style %s\n", field->name);
     if (vmsd->pre_save) {
         vmsd->pre_save(opaque);
     }
+
     while(field->name) {
         if (!field->field_exists ||
             field->field_exists(opaque, vmsd->version_id)) {
@@ -1488,6 +1480,7 @@ static void vmstate_save(QEMUFile *f, SaveStateEntry *se)
 #define QEMU_VM_SECTION_END          0x03
 #define QEMU_VM_SECTION_FULL         0x04
 #define QEMU_VM_SUBSECTION           0x05
+#define QEMU_VM_SECTION_NEGOTIATE    0x06
 
 bool qemu_savevm_state_blocked(Monitor *mon)
 {
@@ -1503,12 +1496,16 @@ bool qemu_savevm_state_blocked(Monitor *mon)
     return false;
 }
 
+//from migration-slave.c
+extern void init_host_slaves(struct FdMigrationState *s);
+
 int 
 qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f, 
                                     int blk_enable, int shared)
 {
     FdMigrationState *s = (FdMigrationState *)opaque;
     SaveStateEntry *se;
+    int ret;
 
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
         if(se->set_params == NULL) {
@@ -1529,7 +1526,7 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
     if (ret < 0) {
         fprintf(stderr, "Negotiate failed, %d\n", ret);
         migrate_fd_error(s);
-        return;
+        return -1;
     }
 
     /*
@@ -1541,7 +1538,7 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
     s->master_list = NULL;
     s->slave_list = NULL;
 
-    pthread_barrier_init(&s->last_barr);
+    pthread_barrier_init(&s->last_barr, NULL, s->para_config->num_slaves + 2);
     s->laster_iter = 0;
     /*
      * initiate slave threads
@@ -1657,6 +1654,8 @@ int qemu_savevm_state_iterate(Monitor *mon, QEMUFile *f)
 
     return 0;
 }
+
+int qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f);
 
 /*
  * classicsong
@@ -1883,15 +1882,16 @@ typedef struct LoadStateEntry {
 } LoadStateEntry;
 
 struct FdMigrationDestState *dest_state;
+typedef QLIST_HEAD(migr_handler, LoadStateEntry) migr_handler;
 
+void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers);
 //classicsong
 void 
-slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers) {
-    LoadStateEntry *le, *new_le;
+slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers) {
+    LoadStateEntry *le;
     uint8_t section_type;
-    unsigned int v;
+    uint32_t section_id;
     int ret;
-    struct migration_task_queue *task_queue;
 
     while ((section_type = qemu_get_byte(f)) != QEMU_VM_EOF) {
         /*
@@ -1902,7 +1902,7 @@ slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers) {
         case QEMU_VM_SECTION_END:
             section_id = qemu_get_be32(f);
 
-            QLIST_FOREACH(le, &loadvm_handlers, entry) {
+            QLIST_FOREACH(le, (migr_handler *)loadvm_handlers, entry) {
                 if (le->section_id == section_id) {
                     break;
                 }
@@ -1926,9 +1926,13 @@ slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers) {
             break;
         }
     }
+
+ out:
+    return;
 }
 
 extern pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers);
+static struct migration_slave *dest_slave_list = NULL;
 
 int qemu_loadvm_state(QEMUFile *f)
 {
@@ -1963,6 +1967,10 @@ int qemu_loadvm_state(QEMUFile *f)
         SaveStateEntry *se;
         char idstr[257];
         int len;
+
+        //classicsong add this
+        int num_ips, ssl_type, i;
+        uint8_t ip_buf[32];               //32 bytes is enough for dest_ip:port
 
         switch (section_type) {
         case QEMU_VM_SECTION_START:
@@ -2033,8 +2041,7 @@ int qemu_loadvm_state(QEMUFile *f)
              * negotiation here
              */
         case QEMU_VM_SECTION_NEGOTIATE:
-            int num_ips, ssl_type, i;
-            char ip_buf[32];               //32 bytes is enough for dest_ip:port
+            DPRINTF("In negotiation section\n");
             num_ips = qemu_get_be32(f);
             ssl_type = qemu_get_be32(f);
 
@@ -2046,11 +2053,11 @@ int qemu_loadvm_state(QEMUFile *f)
                 int len = qemu_get_be32(f);
 
                 qemu_get_buffer(f, ip_buf, len);
-                tid = create_dest_slave(ip_buf, ssl_type, &loadvm_handlers);
+                tid = create_dest_slave((char *)ip_buf, ssl_type, &loadvm_handlers);
                 struct migration_slave *slave = (struct migration_slave *)malloc(sizeof(struct migration_slave));
-                slave->tid = tid;
-                slave->next = slave_list;
-                slave_list= slave;
+                slave->slave_id = tid;
+                slave->next = dest_slave_list;
+                dest_slave_list = slave;
             }
             break;
         default:
@@ -2059,6 +2066,8 @@ int qemu_loadvm_state(QEMUFile *f)
             goto out;
         }
     }
+
+    DPRINTF("Get out of qemu_loadvm_state\n");
 
     cpu_synchronize_all_post_init();
 

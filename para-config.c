@@ -2,6 +2,10 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "qemu-common.h"
+#include "qemu-char.h"
+
+
 #include "read_config.h"
 #include "para-config.h"
 
@@ -18,7 +22,7 @@ static void init_param(struct parallel_param *param) {
 }
 
 /* Get Number from List */
-static int get_one_num(char *name, cfg_list *list, int *value, char* error) {
+static int get_one_num(const char *name, cfg_list *list, int *value, const char* error) {
 	num_list *n_list = NULL;
 	if ( (n_list = get_num_list(name, list)) == NULL ) {
 		perror(error);
@@ -30,7 +34,7 @@ static int get_one_num(char *name, cfg_list *list, int *value, char* error) {
 }
 
 /* Get IP Strings from List */
-static int get_multi_ip(char *name, cfg_list *list, struct ip_list **ip, char *error) {
+static int get_multi_ip(const char *name, cfg_list *list, struct ip_list **ip, const char *error) {
 	str_list *s_list = NULL;
 	if ( (s_list = get_str_list(name, list)) == NULL ) {
 		perror(error);
@@ -38,7 +42,7 @@ static int get_multi_ip(char *name, cfg_list *list, struct ip_list **ip, char *e
 	} else {
 		for (;s_list != NULL; s_list = s_list->next) {
 			struct ip_list *host = (struct ip_list*) calloc(sizeof(struct ip_list), 1); 
-			host->host_port = s_list->string;
+			host->host_port = (uint8_t *)s_list->string;
 			host->len = strlen(s_list->string);
 			if (!(*ip)) {
 				*ip = host;
@@ -52,7 +56,7 @@ static int get_multi_ip(char *name, cfg_list *list, struct ip_list **ip, char *e
 }
 
 /* Parse Configure File Main Function */
-struct parallel_param *parse_file(char *file) {
+struct parallel_param *parse_file(const char *file) {
     struct parallel_param *para_config;
 	cfg_list *list = NULL;
 
@@ -95,6 +99,7 @@ struct parallel_param *parse_file(char *file) {
 	if (get_one_num("max_downtime", list, &para_config->max_downtime, "max_downtime error") < 0)
 		goto error;
 
+    reveal_param(para_config);
     return para_config;
 error:
 	free(para_config);

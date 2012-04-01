@@ -22,6 +22,9 @@
 #include "blockdev.h"
 #include <assert.h>
 
+//classicsong
+#include "migr-vqueue.h"
+
 #define BLOCK_SIZE (BDRV_SECTORS_PER_DIRTY_CHUNK << BDRV_SECTOR_BITS)
 
 #define BLK_MIG_FLAG_DEVICE_BLOCK       0x01
@@ -92,6 +95,15 @@ typedef struct BlkMigState {
 
 static BlkMigState block_mig_state;
 
+uint64_t blk_read_remaining(void);
+
+uint64_t 
+blk_read_remaining(void) {
+    uint64_t left = block_mig_state.submitted + block_mig_state.read_done;
+    DPRINTF("Data remaing read %d, %d\n", block_mig_state.submitted, block_mig_state.read_done);
+    return  left * BLOCK_SIZE;
+}
+
 static void blk_send(QEMUFile *f, BlkMigBlock * blk)
 {
     int len;
@@ -108,6 +120,7 @@ static void blk_send(QEMUFile *f, BlkMigBlock * blk)
     qemu_put_buffer(f, blk->buf, BLOCK_SIZE);
 }
 
+void disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f);
 //classicsong
 void
 disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f) {
@@ -313,6 +326,12 @@ static void set_dirty_tracking(int enable)
     }
 }
 
+void set_dirty_tracking_master(int enable);
+
+void set_dirty_tracking_master(int enable) {
+    set_dirty_tracking(enable);
+}
+
 /*
  * classicsong
  * add a para QEMUFile for init_blk_migration_it
@@ -386,8 +405,8 @@ static void init_blk_migration(Monitor *mon, QEMUFile *f)
     block_mig_state.total_time = 0;
     block_mig_state.reads = 0;
 
-    tmp->mon = mon;
-    tmp->f = f;
+    tmp.mon = mon;
+    tmp.f = f;
 
     bdrv_iterate(init_blk_migration_it, &tmp);
 }
@@ -437,6 +456,13 @@ static void blk_mig_reset_dirty_cursor(void)
     QSIMPLEQ_FOREACH(bmds, &block_mig_state.bmds_list, entry) {
         bmds->cur_dirty = 0;
     }
+}
+
+void blk_mig_reset_dirty_cursor_master(void);
+
+void blk_mig_reset_dirty_cursor_master(void)
+{
+    blk_mig_reset_dirty_cursor();
 }
 
 static int mig_save_device_dirty(Monitor *mon, QEMUFile *f,
@@ -565,6 +591,13 @@ static int64_t get_remaining_dirty(void)
     return dirty * BLOCK_SIZE;
 }
 
+int64_t get_remaining_dirty_master(void);
+
+int64_t get_remaining_dirty_master(void) 
+{
+    return get_remaining_dirty();
+}
+
 static int is_stage2_completed(void)
 {
     int64_t remaining_dirty;
@@ -615,6 +648,13 @@ static void blk_mig_cleanup(Monitor *mon)
     monitor_printf(mon, "\n");
 }
 
+void blk_mig_cleanup_master(Monitor *mon);
+
+void blk_mig_cleanup_master(Monitor *mon)
+{
+    blk_mig_cleanup(mon);
+}
+
 static unsigned long 
 flush_blks_master(struct migration_task_queue *task_q, QEMUFile *f, int last) {
     //put the task into task queue
@@ -642,9 +682,9 @@ flush_blks_master(struct migration_task_queue *task_q, QEMUFile *f, int last) {
         return 0;
 
     body = (struct task_body *)malloc(sizeof(struct task_body));
-    body->types = TASK_TYPE_DISK;
+    body->type = TASK_TYPE_DISK;
     body->len = 0;
-    body->iter_num = task_queue->iter_num;
+    body->iter_num = task_q->iter_num;
 
     while ((blk = QSIMPLEQ_FIRST(&block_mig_state.blk_list)) != NULL) {
         if (blk->ret < 0) {
@@ -664,7 +704,7 @@ flush_blks_master(struct migration_task_queue *task_q, QEMUFile *f, int last) {
             break;
     }
 
-    if (queue_push_task(task_queue, body) < 0)
+    if (queue_push_task(task_q, body) < 0)
         fprintf(stderr, "Enqueue task error\n");
 
     DPRINTF("%s Exit submitted %d read_done %d transferred %d\n", __FUNCTION__,
@@ -688,13 +728,14 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
     struct task_body *body;
 
     monitor_printf(mon, "last iteration for disk");
-    data_sent += flush_blks_master(task_q, f);
+    data_sent += flush_blks_master(task_q, f, 1);
 
     body = (struct task_body *)malloc(sizeof(struct task_body));
-    body->types = TASK_TYPE_DISK;
+    body->type = TASK_TYPE_DISK;
     body->len = 0;
-    body->iter_num = task_queue->iter_num;
+    body->iter_num = task_q->iter_num;
 
+    DPRINTF("Start disk sync ops, last iteration\n");
     /*
      * the for loop will handle all dirty pages in this sector
      */
@@ -717,25 +758,26 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
     
             if (bdrv_read(bmds->bs, sector, blk->buf,
                           nr_sectors) < 0) {
-                goto error;
+                fprintf(stderr, "Error reading block device");
+                return -1;
             }
      
-	    /*
-	     * classicsong create task
-	     */
+            /*
+             * classicsong create task
+             */
             body->blocks[body->len++].ptr = blk;
 
             bdrv_reset_dirty(bmds->bs, sector, nr_sectors);
             data_sent += BLOCK_SIZE;
 
             if (body->len == DEFAULT_DISK_BATCH_LEN) {
-                if (queue_push_task(task_queue, body) < 0)
+                if (queue_push_task(task_q, body) < 0)
                     fprintf(stderr, "Enqueue task error\n");
 
                 body = (struct task_body *)malloc(sizeof(struct task_body));
-                body->types = TASK_TYPE_DISK;
+                body->type = TASK_TYPE_DISK;
                 body->len = 0;
-                body->iter_num = task_queue->iter_num;
+                body->iter_num = task_q->iter_num;
             }
         }
 
@@ -743,14 +785,14 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
         bmds->cur_dirty = sector;
     }
 
-    if (queue_push_task(task_queue, body) < 0)
+    if (queue_push_task(task_q, body) < 0)
         fprintf(stderr, "Enqueue task error\n");
 
     return data_sent;
 }
 
 static unsigned long
-disk_save_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFile *file) {
+disk_save_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFile *f) {
     unsigned long data_sent = 0;
     int flush_batch = 1;
     unsigned long sent_last = 0;
@@ -796,7 +838,7 @@ disk_save_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFile *fi
 }
 
 static unsigned long
-disk_save_last_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFile *file) {
+disk_save_last_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFile *f) {
     BlkMigDevState *bmds;
     unsigned long data_sent = 0;
 
@@ -819,8 +861,12 @@ disk_save_last_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFil
     return data_sent;
 }
 
+unsigned long block_save_iter(int stage, Monitor *mon, 
+                              struct migration_task_queue *task_queue, QEMUFile *f);
+//from migration-master.c
+void create_host_disk_master(void *opaque);
 
-unsigned long
+unsigned long 
 block_save_iter(int stage, Monitor *mon, 
                 struct migration_task_queue *task_queue, QEMUFile *f) {
     unsigned long bytes_transferred = 0;
@@ -899,19 +945,20 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
         flags = addr & ~BDRV_SECTOR_MASK;
         addr >>= BDRV_SECTOR_BITS;
 
-	/*
-	 * get iter_num
-	 */
-	iter_num = (flags & DISK_VNUM_MASK) >> DISK_VNUM_OFFSET;
+        /*
+         * get iter_num
+         */
+        iter_num = (flags & DISK_VNUM_MASK) >> DISK_VNUM_OFFSET;
 	
-	/*
-	 * only BLK_MIG_FLAG_DEVICE_BLOCK to transfer data
-	 */
+        DPRINTF("handling iter %d\n", iter_num);
+        /*
+         * only BLK_MIG_FLAG_DEVICE_BLOCK to transfer data
+         */
         if (flags & BLK_MIG_FLAG_DEVICE_BLOCK) {
             int ret;
-	    uint32_t disk_vnum = iter_num;
-	    uint32_t curr_vnum;
-	    volatile uint32_t *vnum_p;
+            uint32_t disk_vnum = iter_num;
+            uint32_t curr_vnum;
+            volatile uint32_t *vnum_p;
 
             /* get device name */
             len = qemu_get_byte(f);
@@ -935,12 +982,12 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
                 }
             }
 
-	    /*
-	     * get version number pointer first
-	     * then get block data
-	     * the block data is sent at host end so we must receive it
-	     */
-	    vnum_p = &(bs->version_queue[addr]);
+            /*
+             * get version number pointer first
+             * then get block data
+             * the block data is sent at host end so we must receive it
+             */
+            vnum_p = &(bs->version_queue[addr]);
 	
             if (total_sectors - addr < BDRV_SECTORS_PER_DIRTY_CHUNK) {
                 nr_sectors = total_sectors - addr;
@@ -952,34 +999,34 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
 
             qemu_get_buffer(f, buf, BLOCK_SIZE);
 
-	re_check_nor:
-	    curr_vnum = *vnum_p;
-	    /*
+        re_check_nor:
+            curr_vnum = *vnum_p;
+            /*
              * some one is holding the block
              */
             while (curr_vnum % 2 == 1) {
                 curr_vnum = *vnum_p;
             }
 
-	    if (curr_vnum > mem_vnum * 2) {
-		qemu_free(buf);
-	        continue;
-	    }
+            if (curr_vnum > disk_vnum * 2) {
+                qemu_free(buf);
+                continue;
+            }
 
-	    /*
+            /*
              * now we will hold the block
              */
-            if (hold_block(vnum_p, curr_vnum, mem_vnum)) {
+            if (hold_block(vnum_p, curr_vnum, disk_vnum)) {
                 /* fail holding the page */
                 goto re_check_nor;
             }
 
             ret = bdrv_write(bs, addr, buf, nr_sectors);
 
-	    /*
+            /*
              * now we release the block
              */
-            release_block(vnum_p, mem_vnum);
+            release_block(vnum_p, disk_vnum);
 
             qemu_free(buf);
             if (ret < 0) {
@@ -997,15 +1044,15 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
             fprintf(stderr, "Unknown flags\n");
             return -EINVAL;
         } else if (iter_num == DISK_NEGOTIATE) {
-	    /*
-	     * get device name first
-	     * and then the sector size
-	     */
-	    len = qemu_get_byte(f);
-	    qemu_get_buffer(f, (uint8_t *)device_name, len);
+            /*
+             * get device name first
+             * and then the sector size
+             */
+            len = qemu_get_byte(f);
+            qemu_get_buffer(f, (uint8_t *)device_name, len);
             device_name[len] = '\0';
 
-	    bs = bdrv_find(device_name);
+            bs = bdrv_find(device_name);
             if (!bs) {
                 fprintf(stderr, "Error unknown block device %s\n",
                         device_name);
@@ -1015,7 +1062,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
 	    total_sectors = qemu_get_be64(f);
 	    DPRINTF("NEGOTIATE disk bs %s, size %ld\n", device_name, total_sectors);
 
-	    bs->version_queue = (uint32_t *)calloc(sizeof(uint32_t) * total_sectors);
+	    bs->version_queue = (uint32_t *)calloc(total_sectors, sizeof(uint32_t));
 	}
 
         if (qemu_file_has_error(f)) {

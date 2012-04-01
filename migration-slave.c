@@ -111,8 +111,8 @@ tcp_start_outgoing_migration_slave(Monitor *mon,
 }
 
 extern void disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f);
-extern int ram_save_block_slave(unsigned offset, uint8_t *p, int cont, 
-                                struct FdMigrationStateSlave *s, int mem_vnum);
+extern void ram_save_block_slave(unsigned offset, uint8_t *p, void *block_p,
+                                 struct FdMigrationStateSlave *s, int mem_vnum);
 void *
 start_host_slave(void *data) {
     FdMigrationStateSlave *s = (FdMigrationStateSlave *)data;
@@ -201,7 +201,7 @@ start_host_slave(void *data) {
 
             for (i = 0; i < body->len; i++) {
                 ram_save_block_slave(body->pages[i].addr, body->pages[i].ptr, 
-                                     body->pages[i].cont, s, s->mem_task_queue->iter_num);
+                                     body->pages[i].block, s, s->mem_task_queue->iter_num);
             }
 
             /* End of the single task */
@@ -350,6 +350,7 @@ void *start_dest_slave(void *data) {
     free(para);
     return NULL;
 }
+pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers);
 
 pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers) {
     struct dest_slave_para *data = (struct dest_slave_para *)malloc(sizeof(struct dest_slave_para));

@@ -8,7 +8,7 @@
 
 #define SJC_DEBUG
 /* Type String */
-char *type_string[] = {
+const char *type_string[] = {
 	"NUMBER",
 	"STRING"
 };
@@ -27,9 +27,9 @@ static int search_in_predefine(char *str, int str_len)
 
 static cfg_pair_t* parse_oneline(char *line) 
 {
-	char *token = CONFIG_TOKEN;
+	const char *token = CONFIG_TOKEN;
 	char *str = strtok(line, token);
-	cfg_value_type type;
+	int type;
 	str_list *s_list = NULL;
 	num_list *n_list = NULL;
 	cfg_pair_t *pair =NULL;
@@ -86,7 +86,7 @@ static cfg_pair_t* parse_oneline(char *line)
 	return pair;
 }
 
-int read_cfg_file(char *file_path, cfg_list** list) 
+int read_cfg_file(const char *file_path, cfg_list** list) 
 {
 	FILE *fd;
 	char line[MAX_CONFIG_LINE];
@@ -117,7 +117,7 @@ int read_cfg_file(char *file_path, cfg_list** list)
 }
 
 /* This function is used to process H file */
-static int config_each(char *name, cfg_value_type type)
+static int config_each(const char *name, cfg_value_type type)
 {
 	cfg_list *n;
 	if (cfg_predefine == NULL) {
@@ -137,7 +137,7 @@ static int config_each(char *name, cfg_value_type type)
 }
 
 /* Init From H File */
-void init_config()
+void init_config(void)
 {
 #define c_each(__a,__b) config_each(__a, __b)
 #include "mc_config_list.h"
@@ -182,7 +182,7 @@ cfg_value_type cfg_which_type(char* name, cfg_list *list) {
 }
 
 /* Return String List */
-str_list* get_str_list(char* name, cfg_list *list){
+str_list* get_str_list(const char* name, cfg_list *list){
 	cfg_pair_t *pair;
 	for (; list != NULL; list = list->next) {
 		pair = list->pair;
@@ -194,7 +194,7 @@ str_list* get_str_list(char* name, cfg_list *list){
 }
 
 /* Return Number List */
-num_list* get_num_list(char* name, cfg_list *list){
+num_list* get_num_list(const char* name, cfg_list *list){
 	cfg_pair_t *pair;
 	for (; list != NULL; list = list->next) {
 		pair = list->pair;

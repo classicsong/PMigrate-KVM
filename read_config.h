@@ -25,7 +25,7 @@ struct num_list{
 
 /* Configure Pair */
 typedef struct cfg_pair {
-	char *cfg_name;
+	const char *cfg_name;
 	union {
 		str_list *s_list;
 		num_list *n_list;
@@ -41,10 +41,10 @@ struct cfg_list{
 	cfg_pair_t *pair;
 }; 
 
-void init_config();
-int read_cfg_file(char *file_path, cfg_list** list);
-int reveal_config_list(cfg_list* list);
-cfg_value_type cfg_which_type(char* name, cfg_list *list);
-str_list* get_str_list(char* name, cfg_list *list);
-num_list* get_num_list(char* name, cfg_list *list);
+extern void init_config(void);
+extern int read_cfg_file(const char *file_path, cfg_list** list);
+extern int reveal_config_list(cfg_list* list);
+extern cfg_value_type cfg_which_type(char* name, cfg_list *list);
+extern str_list* get_str_list(const char* name, cfg_list *list);
+extern num_list* get_num_list(const char* name, cfg_list *list);
 #endif

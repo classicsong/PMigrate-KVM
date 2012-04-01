@@ -3,7 +3,7 @@
 
 struct ip_list {
     struct ip_list *next;
-    char *host_port;
+    uint8_t *host_port;
     int len;
 };
 
@@ -26,6 +26,6 @@ struct parallel_param {
 	int max_downtime;
 };
 
-extern struct parallel_param *parse_file(char *file);
+extern struct parallel_param *parse_file(const char *file);
 extern int reveal_param(struct parallel_param *param);
 #endif
