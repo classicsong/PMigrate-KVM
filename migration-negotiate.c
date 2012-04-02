@@ -12,6 +12,16 @@
 //from savevm.c
 #define QEMU_VM_SECTION_NEGOTIATE    0x06
 
+#define DEBUG_NEGOTIATE
+
+#ifdef DEBUG_NEGOTIATE
+#define DPRINTF(fmt, ...) \
+    do { printf("negotiate: " fmt, ## __VA_ARGS__); } while (0)
+#else
+#define DPRINTF(fmt, ...) \
+    do { } while (0)
+#endif
+
 int 
 qemu_savevm_state_negotiate(FdMigrationState *s, QEMUFile *f) {
     int num_ips = s->para_config->num_ips;
@@ -23,6 +33,7 @@ qemu_savevm_state_negotiate(FdMigrationState *s, QEMUFile *f) {
      * 1. num of dest ip used
      * 2. SSL type
      */
+    DPRINTF("Negotiating\n");
     qemu_put_byte(f, QEMU_VM_SECTION_NEGOTIATE);
     qemu_put_be32(f, num_ips);
 
@@ -32,6 +43,7 @@ qemu_savevm_state_negotiate(FdMigrationState *s, QEMUFile *f) {
         qemu_put_be32(f, (unsigned int)tmp_ip_list->len);
         qemu_put_buffer(f, tmp_ip_list->host_port, tmp_ip_list->len);
         tmp_ip_list = tmp_ip_list->next;
+        DPRINTF("put data %s\n", tmp_ip_list->host_port);
     }
 
     return 0;

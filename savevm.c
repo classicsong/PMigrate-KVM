@@ -1947,6 +1947,7 @@ int qemu_loadvm_state(QEMUFile *f)
         return -EINVAL;
     }
 
+    DPRINTF("start load vm state\n");
     v = qemu_get_be32(f);
     if (v != QEMU_VM_FILE_MAGIC)
         return -EINVAL;
@@ -1962,6 +1963,7 @@ int qemu_loadvm_state(QEMUFile *f)
     dest_state = (struct FdMigrationDestState *)malloc(sizeof(struct FdMigrationDestState));
     dest_state->slave_list = NULL;
 
+    DPRINTF("Enter load data\n");
     while ((section_type = qemu_get_byte(f)) != QEMU_VM_EOF) {
         uint32_t instance_id, version_id, section_id;
         SaveStateEntry *se;
@@ -1972,9 +1974,12 @@ int qemu_loadvm_state(QEMUFile *f)
         int num_ips, ssl_type, i;
         uint8_t ip_buf[32];               //32 bytes is enough for dest_ip:port
 
+        DPRINTF("section type %d\n", section_type);
         switch (section_type) {
         case QEMU_VM_SECTION_START:
         case QEMU_VM_SECTION_FULL:
+            DPRINTF("Start transfer data\n");
+
             /* Read section start */
             section_id = qemu_get_be32(f);
             len = qemu_get_byte(f);
@@ -2053,6 +2058,8 @@ int qemu_loadvm_state(QEMUFile *f)
                 int len = qemu_get_be32(f);
 
                 qemu_get_buffer(f, ip_buf, len);
+                ip_buf[len] = "\0";
+                DPRINTF("get data %s\n", ip_buf);
                 tid = create_dest_slave((char *)ip_buf, ssl_type, &loadvm_handlers);
                 struct migration_slave *slave = (struct migration_slave *)malloc(sizeof(struct migration_slave));
                 slave->slave_id = tid;

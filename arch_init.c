@@ -514,6 +514,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             se->version_queue = (uint32_t *)calloc(addr / TARGET_PAGE_SIZE, sizeof(uint32_t));
             se->total_size = addr / TARGET_PAGE_SIZE;
 
+            DPRINTF("total mem size is %x\n", se->total_size);
             if (version_id == 3) {
                 if (addr != ram_bytes_total()) {
                     return -EINVAL;
@@ -534,6 +535,8 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                     qemu_get_buffer(f, (uint8_t *)id, len);
                     id[len] = 0;
                     length = qemu_get_be64(f);
+
+                    DPRINTF("memory id %s\n", id);
 
                     DPRINTF("Get mem block %s\n", id);
                     QLIST_FOREACH(block, &ram_list.blocks, next) {

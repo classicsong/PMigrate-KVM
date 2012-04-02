@@ -170,6 +170,7 @@ start_host_slave(void *data) {
     f = s->file;
     pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
 
+    DPRINTF("slave start migration\n");
     /*
      * wait for following commands
      * As disk task maybe limited by the disk throughput, so we perfer to transfer disk first and then memory
@@ -355,6 +356,9 @@ pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers
 pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers) {
     struct dest_slave_para *data = (struct dest_slave_para *)malloc(sizeof(struct dest_slave_para));
     pthread_t tid;
+
+    DPRINTF("create slave %s\n", data->listen_ip);
+
     data->listen_ip = listen_ip;
     data->ssl_type = ssl_type;
     data->handlers = loadvm_handlers;
