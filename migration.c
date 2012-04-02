@@ -84,7 +84,7 @@ int do_migrate(Monitor *mon, const QDict *qdict, QObject **ret_data)
     int blk = qdict_get_try_bool(qdict, "blk", 0);
     int inc = qdict_get_try_bool(qdict, "inc", 0);
     const char *uri = qdict_get_str(qdict, "uri");
-    const char *config_file = qdict_get_str(qdict, "config");
+    const char *config_file = "/root/images/config";//qdict_get_str(qdict, "config");
 
     if (current_migration &&
         current_migration->get_status(current_migration) == MIG_STATE_ACTIVE) {
