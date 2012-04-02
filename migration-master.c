@@ -18,7 +18,7 @@
 
 #ifdef DEBUG_MIGRATION_MASTER
 #define DPRINTF(fmt, ...) \
-    do { printf("migration_slave: " fmt, ## __VA_ARGS__); } while (0)
+    do { printf("migration_master: " fmt, ## __VA_ARGS__); } while (0)
 #else
 #define DPRINTF(fmt, ...) \
     do { } while (0)

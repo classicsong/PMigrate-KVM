@@ -21,6 +21,6 @@ typedef struct SaveStateEntry {
     CompatEntry *compat;
     int no_migrate;
     uint32_t *version_queue;
-    int total_size;
+    unsigned long total_size;
 } SaveStateEntry;
 #endif

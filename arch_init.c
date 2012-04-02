@@ -507,6 +507,9 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 
+        DPRINTF("se is %p\n", se);
+        DPRINTF("se version queue is %p\n", se->version_queue);
+        DPRINTF("addr is %lx:%lx\n", addr, addr / TARGET_PAGE_SIZE);
         if (flags & RAM_SAVE_FLAG_MEM_SIZE) {
             /*
              * classicsong add version queue for memory
@@ -515,7 +518,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             se->version_queue = (uint32_t *)calloc(addr / TARGET_PAGE_SIZE, sizeof(uint32_t));
             se->total_size = addr / TARGET_PAGE_SIZE;
 
-            DPRINTF("total mem size is %x\n", se->total_size);
+            DPRINTF("total mem size is %lx\n", se->total_size);
             if (version_id == 3) {
                 if (addr != ram_bytes_total()) {
                     return -EINVAL;
@@ -583,7 +586,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             }
 
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
-                fprintf(stderr, "error host memory addr %x; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
+                fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
             vnum_p = &(se->version_queue[addr/TARGET_PAGE_SIZE]);
 
         re_check_press:
@@ -644,7 +647,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 host = host_from_stream_offset(f, addr, flags);
 
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
-                fprintf(stderr, "error host memory addr %x; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
+                fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
             vnum_p = &(se->version_queue[addr/TARGET_PAGE_SIZE]);
 
         re_check_nor:

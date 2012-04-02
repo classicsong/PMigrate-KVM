@@ -2016,7 +2016,8 @@ int qemu_loadvm_state(QEMUFile *f)
             le->version_id = version_id;
             QLIST_INSERT_HEAD(&loadvm_handlers, le, entry);
 
-            ret = vmstate_load(f, le->se, le->version_id);
+            DPRINTF("get se %s:%p\n", idstr, se);
+            ret = vmstate_load(f, se, le->version_id);
             if (ret < 0) {
                 fprintf(stderr, "qemu: warning: error while loading state for instance 0x%x of device '%s'\n",
                         instance_id, idstr);
@@ -2062,7 +2063,7 @@ int qemu_loadvm_state(QEMUFile *f)
                 int len = qemu_get_be32(f);
 
                 qemu_get_buffer(f, ip_buf, len);
-                ip_buf[len] = "\0";
+                ip_buf[len] = 0;
                 DPRINTF("get data %s\n", ip_buf);
                 tid = create_dest_slave((char *)ip_buf, ssl_type, &loadvm_handlers);
                 struct migration_slave *slave = (struct migration_slave *)malloc(sizeof(struct migration_slave));
