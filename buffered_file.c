@@ -456,7 +456,7 @@ QEMUFile *qemu_fopen_ops_buffered(void *opaque,
     s->file = qemu_fopen_ops(s, buffered_put_buffer, NULL,
                              buffered_close, buffered_rate_limit,
                              buffered_set_rate_limit,
-			     buffered_get_rate_limit);
+                             buffered_get_rate_limit);
 
     /*
      * classicsong

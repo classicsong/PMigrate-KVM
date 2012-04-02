@@ -1517,6 +1517,7 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
     qemu_put_be32(f, QEMU_VM_FILE_MAGIC);
     qemu_put_be32(f, QEMU_VM_FILE_VERSION);
 
+    qemu_fflush(f);
     /*
      * classicsong
      * negotiate parallel migration
@@ -1529,6 +1530,7 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
         return -1;
     }
 
+    qemu_fflush(f);
     /*
      * create task queue
      */

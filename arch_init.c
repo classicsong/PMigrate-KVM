@@ -446,6 +446,7 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
          * tell the end of initialization
          */
         qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
+        qemu_fflush(f);
 
         DPRINTF("Finish memory negotiation start memory master\n");
 
