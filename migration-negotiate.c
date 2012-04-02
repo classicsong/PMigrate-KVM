@@ -43,8 +43,8 @@ qemu_savevm_state_negotiate(FdMigrationState *s, QEMUFile *f) {
         tmp_ip_list->host_port[tmp_ip_list->len] = "\0";
         qemu_put_be32(f, (unsigned int)tmp_ip_list->len);
         qemu_put_buffer(f, tmp_ip_list->host_port, tmp_ip_list->len);
-        tmp_ip_list = tmp_ip_list->next;
         DPRINTF("put data %s\n", tmp_ip_list->host_port);
+        tmp_ip_list = tmp_ip_list->next;
     }
 
     return 0;
