@@ -1456,7 +1456,9 @@ void vmstate_save_state(QEMUFile *f, const VMStateDescription *vmsd,
 static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id)
 {
     if (!se->vmsd) {         /* Old style */
-        return se->load_state(f, se->opaque, version_id);
+        //classicsong change it
+        return se->load_state(f, se, version_id);
+        //return se->load_state(f, se->opaque, version_id);
     }
     return vmstate_load_state(f, se->vmsd, se->opaque, version_id);
 }
