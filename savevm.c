@@ -1510,8 +1510,8 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
         if(se->set_params == NULL) {
             continue;
-	}
-	se->set_params(blk_enable, shared, se->opaque);
+        }
+        se->set_params(blk_enable, shared, se->opaque);
     }
     
     qemu_put_be32(f, QEMU_VM_FILE_MAGIC);
@@ -1534,6 +1534,8 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
      */
     s->mem_task_queue = new_task_queue();
     s->disk_task_queue = new_task_queue();
+
+    DPRINTF("task_queue created\n");
 
     s->master_list = NULL;
     s->slave_list = NULL;
