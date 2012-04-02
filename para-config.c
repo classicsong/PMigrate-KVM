@@ -66,6 +66,8 @@ struct parallel_param *parse_file(const char *file) {
     para_config = (struct parallel_param *)malloc(sizeof(struct parallel_param));
 	init_param(para_config);
 
+    printf("parsing file %s\n", file);
+
     //SSL type
 	if (get_one_num("SSL_type", list, &para_config->SSL_type, "SSL_type error") < 0)
 		goto error;

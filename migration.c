@@ -96,6 +96,7 @@ int do_migrate(Monitor *mon, const QDict *qdict, QObject **ret_data)
         return -1;
     }
 
+    DPRINTF("Config file is %s\n", config_file);
     if (strstart(uri, "tcp:", &p)) {
         //classicsong
         s = tcp_start_outgoing_migration(mon, p, max_throttle, detach,
