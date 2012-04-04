@@ -276,6 +276,7 @@ ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
     RAMBlock *block = (RAMBlock *)block_p;
     QEMUFile *f = s->file;
 
+    DPRINTF("ram_save_block %p, %lx\n", p, offset);
     if (is_dup_page(p, *p)) {
         qemu_put_be64(f, offset | (block == NULL ? 1 : 0) | RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
         if (block) {
@@ -339,6 +340,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
             body_len ++;
             body->iter_num = task_queue->iter_num;
 
+            DPRINTF("put task %p, %lx\n", p, current_addr);
             if (body_len == DEFAULT_MEM_BATCH_LEN) {
                 body->len = body_len;
 

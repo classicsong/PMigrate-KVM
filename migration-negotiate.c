@@ -40,7 +40,7 @@ qemu_savevm_state_negotiate(FdMigrationState *s, QEMUFile *f) {
     qemu_put_be32(f, s->para_config->SSL_type);
 
     for (i = 0; i < num_ips; i++) {
-        tmp_ip_list->host_port[tmp_ip_list->len] = "\0";
+        tmp_ip_list->host_port[tmp_ip_list->len] = 0;
         qemu_put_be32(f, (unsigned int)tmp_ip_list->len);
         qemu_put_buffer(f, tmp_ip_list->host_port, tmp_ip_list->len);
         DPRINTF("put data %s\n", tmp_ip_list->host_port);

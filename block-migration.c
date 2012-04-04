@@ -1040,9 +1040,6 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
             printf("Completed %d %%%c", (int)addr,
                    (addr == 100) ? '\n' : '\r');
             fflush(stdout);
-        } else if (!(flags & BLK_MIG_FLAG_EOS)) {
-            fprintf(stderr, "Unknown flags\n");
-            return -EINVAL;
         } else if (iter_num == DISK_NEGOTIATE) {
             /*
              * get device name first
@@ -1059,11 +1056,14 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
                 return -EINVAL;
             }
 
-	    total_sectors = qemu_get_be64(f);
-	    DPRINTF("NEGOTIATE disk bs %s, size %ld\n", device_name, total_sectors);
+            total_sectors = qemu_get_be64(f);
+            DPRINTF("NEGOTIATE disk bs %s, size %ld\n", device_name, total_sectors);
 
-	    bs->version_queue = (uint32_t *)calloc(total_sectors, sizeof(uint32_t));
-	}
+            bs->version_queue = (uint32_t *)calloc(total_sectors, sizeof(uint32_t));
+        } else if (!(flags & BLK_MIG_FLAG_EOS)) {
+            fprintf(stderr, "Unknown flags\n");
+            return -EINVAL;
+        }
 
         if (qemu_file_has_error(f)) {
             return -EIO;
