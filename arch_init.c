@@ -509,7 +509,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 
-        DPRINTF("se is %p\n", se);
+        DPRINTF("se is %p, flags %d\n", se, flags);
         DPRINTF("se version queue is %p\n", se->version_queue);
         DPRINTF("addr is %lx:%lx\n", addr, addr / TARGET_PAGE_SIZE);
         if (flags & RAM_SAVE_FLAG_MEM_SIZE) {
@@ -562,6 +562,8 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                     total_ram_bytes -= length;
                 }
             }
+
+            DPRINTF("Mem block finish\n");
         }
 
 
@@ -579,6 +581,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             uint32_t curr_vnum;
             volatile uint32_t *vnum_p;
 
+            DPRINTF("handlle compress\n");
             if (version_id == 3)
                 host = qemu_get_ram_ptr(addr);
             else
@@ -643,6 +646,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             uint32_t curr_vnum;
             volatile uint32_t *vnum_p;
 
+            DPRINTF("handlle normal page\n");
             if (version_id == 3)
                 host = qemu_get_ram_ptr(addr);
             else

@@ -229,7 +229,7 @@ void init_host_slaves(struct FdMigrationState *s) {
     struct ip_list *next_ip;
     int i;
 
-    DPRINTF("Start init slaves\n");
+    DPRINTF("Start init slaves %d\n", s->para_config->num_slaves);
     s->sender_barr = (struct migration_barrier *)malloc(sizeof(struct migration_barrier));
     init_migr_barrier(s->sender_barr, s->para_config->num_slaves);
 
@@ -357,7 +357,7 @@ pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers
     struct dest_slave_para *data = (struct dest_slave_para *)malloc(sizeof(struct dest_slave_para));
     pthread_t tid;
 
-    DPRINTF("create slave %s\n", data->listen_ip);
+    DPRINTF("create slave %s\n", listen_ip);
 
     data->listen_ip = listen_ip;
     data->ssl_type = ssl_type;
