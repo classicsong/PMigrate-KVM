@@ -509,7 +509,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 
-        DPRINTF("se is %p, flags %d\n", se, flags);
+        DPRINTF("se is %p, flags %x\n", se, flags);
         DPRINTF("se version queue is %p\n", se->version_queue);
         DPRINTF("addr is %lx:%lx\n", addr, addr / TARGET_PAGE_SIZE);
         if (flags & RAM_SAVE_FLAG_MEM_SIZE) {

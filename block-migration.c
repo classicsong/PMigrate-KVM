@@ -915,7 +915,7 @@ static int block_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
     
     qemu_put_be64(f, BLK_MIG_FLAG_EOS);
 
-    DPRINTF("Finish disk negotiation start memory master\n");
+    DPRINTF("Finish disk negotiation start disk master\n");
 
     create_host_disk_master(opaque);
 
@@ -950,7 +950,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
          */
         iter_num = (flags & DISK_VNUM_MASK) >> DISK_VNUM_OFFSET;
 	
-        DPRINTF("handling iter %d\n", iter_num);
+        DPRINTF("handling iter %d, flags %x\n", iter_num, flags);
         /*
          * only BLK_MIG_FLAG_DEVICE_BLOCK to transfer data
          */

@@ -180,6 +180,8 @@ start_host_slave(void *data) {
     while (1) {
         /* check for disk */
         if (queue_pop_task(s->disk_task_queue, &body) > 0) {
+            DPRINTF("get mem disk, %d\n", s->mem_task_queue->iter_num);
+
             /* Section type */
             qemu_put_byte(f, QEMU_VM_SECTION_PART);
             qemu_put_be32(f, s->disk_task_queue->section_id);
@@ -195,7 +197,8 @@ start_host_slave(void *data) {
             free(body);
         }
         /* check for memory */
-        else if (queue_pop_task(s->mem_task_queue, &body) < 0) {
+        else if (queue_pop_task(s->mem_task_queue, &body) > 0) {
+            DPRINTF("get mem task, %lx, %d\n", body->pages[i].addr, s->mem_task_queue->iter_num);
             /* Section type */
             qemu_put_byte(f, QEMU_VM_SECTION_PART);
             qemu_put_be32(f, s->mem_task_queue->section_id);
