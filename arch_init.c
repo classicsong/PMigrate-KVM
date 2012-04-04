@@ -340,13 +340,14 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
             body_len ++;
             body->iter_num = task_queue->iter_num;
 
-            DPRINTF("put task %p, %lx\n", p, current_addr);
             if (body_len == DEFAULT_MEM_BATCH_LEN) {
                 body->len = body_len;
 
                 //finish one batch, for next batch, the RAM_SAVE_FLAG_CONTINUE should not be set
                 last_block = NULL;
                 body_len = 0;
+                DPRINTF("put task %p, %lx\n", p, current_addr);
+
                 if (queue_push_task(task_queue, body) < 0)
                     fprintf(stderr, "Enqueue task error\n");
             }
