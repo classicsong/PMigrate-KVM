@@ -421,6 +421,7 @@ migrate_fd_put(void *opaque) {
         return;
     }
 
+    DPRINTF("END migration\n");
     pthread_barrier_wait(&s->last_barr);
 
     /*

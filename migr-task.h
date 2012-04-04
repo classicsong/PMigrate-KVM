@@ -145,7 +145,7 @@ static int queue_pop_task(struct migration_task_queue *task_queue, struct task_b
     }    
     pthread_mutex_unlock(&(task_queue->task_lock));
 
-    return 0;
+    return 1;
 }
 
 static int queue_push_task(struct migration_task_queue *task_queue, struct task_body *body) {

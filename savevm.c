@@ -1544,7 +1544,7 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
     s->master_list = NULL;
     s->slave_list = NULL;
 
-    pthread_barrier_init(&s->last_barr, NULL, s->para_config->num_slaves + 2);
+    pthread_barrier_init(&s->last_barr, NULL, 3);
     s->laster_iter = 0;
     /*
      * initiate slave threads
