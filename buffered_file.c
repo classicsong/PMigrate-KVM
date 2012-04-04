@@ -225,13 +225,15 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
         offset += ret;
     }
 
+    DPRINTF("data size is %lx, offset is %lx\n", size, offset);
+
     if (offset >= 0) {
         DPRINTF("buffering %d bytes\n", size - offset);
 
         /*
          * all data should be sent in the above while
          */
-        assert(size == offset);
+        //assert(size == offset);
         buffered_append(s, buf + offset, size - offset);
         offset = size;
     }

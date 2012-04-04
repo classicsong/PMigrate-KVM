@@ -156,7 +156,6 @@ static int queue_push_task(struct migration_task_queue *task_queue, struct task_
         return -1;
     }
 
-    fprintf(stderr, "enqueue task %p, %p, %p\n", task_queue, task_queue->list_head.prev, task_queue->list_head.next);
     pthread_mutex_lock(&(task_queue->task_lock));
     task->body = body;
     list_add_tail(&task->list, &task_queue->list_head);
