@@ -422,7 +422,7 @@ qemu_fopen_ops_buffered_slave(void *opaque,
     s = qemu_mallocz(sizeof(*s));
 
     s->opaque = opaque;
-    s->xfer_limit = bytes_per_sec;
+    s->xfer_limit = bytes_per_sec / 1024;
     s->put_buffer = put_buffer;
     s->put_ready = put_ready;
     s->wait_for_unfreeze = wait_for_unfreeze;
