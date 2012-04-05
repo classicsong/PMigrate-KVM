@@ -137,7 +137,7 @@ start_host_slave(void *data) {
         return NULL;
     }
 
-    socket_set_nonblock(s->fd);
+    //socket_set_nonblock(s->fd);
     
     for (i = 0; i < MULTI_TRY; i++) {
         if (connect(s->fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
