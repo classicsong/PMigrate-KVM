@@ -278,7 +278,8 @@ ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
 
     DPRINTF("ram_save_block %p, %lx\n", p, offset);
     if (is_dup_page(p, *p)) {
-        qemu_put_be64(f, offset | (block == NULL ? 1 : 0) | RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
+        qemu_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
+                      RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
         if (block) {
             qemu_put_byte(f, strlen(block->idstr));
             qemu_put_buffer(f, (uint8_t *)block->idstr,
@@ -286,7 +287,7 @@ ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
         }
         qemu_put_byte(f, *p);
     } else {
-        qemu_put_be64(f, offset | (block == NULL ? 1 : 0) | RAM_SAVE_FLAG_PAGE);
+        qemu_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | RAM_SAVE_FLAG_PAGE);
         if (block) {
             qemu_put_byte(f, strlen(block->idstr));
             qemu_put_buffer(f, (uint8_t *)block->idstr,
