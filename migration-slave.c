@@ -194,6 +194,8 @@ start_host_slave(void *data) {
 
             /* End of the single task */
             qemu_put_be64(f, BLK_MIG_FLAG_EOS);
+            qemu_fflush(f);
+
             free(body);
         }
         /* check for memory */
@@ -210,6 +212,8 @@ start_host_slave(void *data) {
 
             /* End of the single task */
             qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
+            qemu_fflush(f);
+
             free(body);
         }
         /* no disk and memory task */
@@ -220,6 +224,7 @@ start_host_slave(void *data) {
                 pthread_barrier_wait(&s->sender_barr->next_iter_barr);
             }
 
+            DPRINTF("No task left\n");
             //get nothing, wait for a moment
             usleep(SLEEP_SHORT_TIME);
         }

@@ -238,6 +238,7 @@ static void blk_mig_read_cb(void *opaque, int ret)
 {
     BlkMigBlock *blk = opaque;
 
+    DPRINTF("get callback\n");
     blk->ret = ret;
 
     blk->time = qemu_get_clock_ns(rt_clock) - blk->time;
@@ -297,6 +298,7 @@ static int mig_save_device_bulk(Monitor *mon, QEMUFile *f,
 
     blk->time = qemu_get_clock_ns(rt_clock);
 
+    DPRINTF("Issuing AIO\n");
     blk->aiocb = bdrv_aio_readv(bs, cur_sector, &blk->qiov,
                                 nr_sectors, blk_mig_read_cb, blk);
     if (!blk->aiocb) {
@@ -661,9 +663,9 @@ flush_blks_master(struct migration_task_queue *task_q, QEMUFile *f, int last) {
     BlkMigBlock *blk;
     struct task_body *body;
 
-    DPRINTF("%s Enter submitted %d read_done %d transferred %d\n",
+    DPRINTF("%s Enter submitted %d read_done %d transferred %d, %d\n",
             __FUNCTION__, block_mig_state.submitted, block_mig_state.read_done,
-            block_mig_state.transferred);
+            block_mig_state.transferred, DEFAULT_DISK_BATCH_MIN_LEN);
 
     /*
      * If it is the end of the iteration and no data in the blk_list 

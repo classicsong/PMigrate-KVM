@@ -171,6 +171,7 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
      */
     if (s->budget < 0) {
         s->burst_time_us = RATE_TO_BTU / s->xfer_limit;
+        DPRINTF("Wait for budget %d, %d, %d\n", s->budget, s->xfer_limit, s->burst_time_us);
 
         if (s->last_put.tv_sec == 0) {
             s->budget += BURST_BUDGET;
@@ -226,7 +227,7 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
         offset += ret;
     }
 
-    DPRINTF("data size is %lx, offset is %lx\n", size, offset);
+    DPRINTF("data size is %x, offset is %x\n", size, offset);
 
     if (offset >= 0) {
         DPRINTF("buffering %d bytes\n", size - offset);
