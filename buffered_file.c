@@ -53,6 +53,7 @@ typedef struct QEMUFileBuffered
 /* Amount in bytes we allow ourselves to send in a burst */
 #define BURST_BUDGET (100 * 1024)
 
+#define DEBUG_BUFFERED_FILE
 #ifdef DEBUG_BUFFERED_FILE
 #define DPRINTF(fmt, ...) \
     do { printf("buffered-file: " fmt, ## __VA_ARGS__); } while (0)
