@@ -594,7 +594,6 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
             vnum_p = &(se->version_queue[addr/TARGET_PAGE_SIZE]);
 
-            DPRINTF("total size %lx, vnum_p addr is %lx[%p]\n", se->total_size, addr / TARGET_PAGE_SIZE, vnum_p);
         re_check_press:
             curr_vnum = *vnum_p;
 
@@ -631,6 +630,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
 
             ch = qemu_get_byte(f);
 
+            DPRINTF("host_addr is %p[%d]\n", host, version_id);
             memset(host, ch, TARGET_PAGE_SIZE);
 #ifndef _WIN32
             if (ch == 0 &&
@@ -659,7 +659,6 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
             vnum_p = &(se->version_queue[addr/TARGET_PAGE_SIZE]);
 
-            DPRINTF("total size %lx, vnum_p addr is %lx[%p]\n", se->total_size, addr / TARGET_PAGE_SIZE, vnum_p);
         re_check_nor:
             curr_vnum = *vnum_p;
 
@@ -696,6 +695,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 goto re_check_nor;
             }
 
+            DPRINTF("normal host_addr is %p[%d]\n", host, version_id);
             qemu_get_buffer(f, host, TARGET_PAGE_SIZE);
 
             /*

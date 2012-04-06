@@ -133,7 +133,6 @@ host_memory_master(void *data) {
         bwidth = s->mem_task_queue->sent_this_iter / bwidth;
 
         data_remaining = ram_bytes_remaining();
-        s->mem_task_queue->sent_last_iter = s->mem_task_queue->sent_this_iter;
         total_sent += s->mem_task_queue->sent_this_iter;
 
         if ((s->mem_task_queue->iter_num >= s->para_config->max_iter) ||
@@ -181,6 +180,9 @@ host_memory_master(void *data) {
             pthread_mutex_unlock(&s->sender_barr->master_lock);
         }
 
+        //set last iter and reset this iter
+        s->mem_task_queue->sent_last_iter = s->mem_task_queue->sent_this_iter;
+        s->mem_task_queue->sent_this_iter = 0;
         //start the next iteration for slaves
         s->sender_barr->mem_state = BARR_STATE_ITER_START;
         pthread_barrier_wait(&s->sender_barr->next_iter_barr);
@@ -197,7 +199,6 @@ host_memory_master(void *data) {
              (s->para_config->max_downtime/2)) 
             && s->laster_iter != 1) {
             bwidth = qemu_get_clock_ns(rt_clock);
-            s->mem_task_queue->sent_this_iter = 0;
             goto skip_iter;
         }
         /*
@@ -315,7 +316,6 @@ host_disk_master(void * data) {
         data_remaining = get_remaining_dirty_master() + blk_read_remaining();
         DPRINTF("The data_remaining %lx; %lx\n", get_remaining_dirty_master(), data_remaining); 
 
-        s->disk_task_queue->sent_last_iter = s->disk_task_queue->sent_this_iter;
         total_sent += s->disk_task_queue->sent_this_iter;
 
         if ((s->disk_task_queue->iter_num >= s->para_config->max_iter) ||
@@ -363,6 +363,9 @@ host_disk_master(void * data) {
             pthread_mutex_unlock(&s->sender_barr->master_lock);
         }
 
+        //set last iter and reset this iter
+        s->disk_task_queue->sent_last_iter = s->disk_task_queue->sent_this_iter;
+        s->disk_task_queue->sent_this_iter = 0;
         //start the next iteration for slaves
         s->sender_barr->disk_state = BARR_STATE_ITER_START;
         pthread_barrier_wait(&s->sender_barr->next_iter_barr);
@@ -378,8 +381,8 @@ host_disk_master(void * data) {
         if (((data_remaining/(s->mem_task_queue->bwidth + s->disk_task_queue->bwidth)) < 
              (s->para_config->max_downtime/2)) 
             && s->laster_iter != 1) {
+            
             bwidth = qemu_get_clock_ns(rt_clock);
-            s->mem_task_queue->sent_this_iter = 0;
             goto skip_iter;
         }
         /*
