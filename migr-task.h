@@ -95,9 +95,9 @@ struct migration_task_queue {
     int force_end;
     int iter_num;
     unsigned long data_remaining;
-    unsigned long bwidth;
     unsigned long sent_this_iter;
     unsigned long sent_last_iter;
+    double bwidth;
 };
 
 struct migration_slave{

@@ -63,7 +63,7 @@ host_memory_master(void *data) {
     //unsigned long sent_this_iter = 0, sent_last_iter = 0;
     unsigned long memory_size = ram_bytes_total();
     unsigned long data_remaining;
-    unsigned long bwidth;
+    double bwidth;
     QEMUFile *f = s->file;
     int iter_num = 0;
 
@@ -126,6 +126,7 @@ host_memory_master(void *data) {
         }
 
         bwidth = qemu_get_clock_ns(rt_clock) - bwidth;
+        DPRINTF("Mem send this iter %lx, bwidth %f\n", s->mem_task_queue->sent_this_iter, bwidth);
         bwidth = s->mem_task_queue->sent_this_iter / bwidth;
 
         data_remaining = ram_bytes_remaining();
@@ -139,13 +140,11 @@ host_memory_master(void *data) {
         s->mem_task_queue->bwidth = bwidth;
         s->mem_task_queue->data_remaining = data_remaining;
 
-        DPRINTF("Mem send this iter %lx, bwidth %lx\n", s->mem_task_queue->sent_this_iter, bwidth);
-
         if (!pthread_mutex_trylock(&s->sender_barr->master_lock)) {
             /*
              * get lock fill memory info
              */
-            DPRINTF("Iter [%d:%d], memory_remain %ld, bwidth %ld\n", 
+            DPRINTF("Iter [%d:%d], memory_remain %ld, bwidth %f\n", 
                     s->mem_task_queue->iter_num, iter_num,
                     data_remaining, bwidth);
             pthread_mutex_unlock(&s->sender_barr->master_lock);
@@ -165,7 +164,7 @@ host_memory_master(void *data) {
             sent_this_iter = s->mem_task_queue->sent_this_iter + s->disk_task_queue->sent_this_iter;
             sent_last_iter = s->mem_task_queue->sent_last_iter + s->disk_task_queue->sent_last_iter;
 
-            DPRINTF("Total Iter [%d:%d], data_remain %ld, bwidth %ld\n", s->mem_task_queue->iter_num, iter_num,
+            DPRINTF("Total Iter [%d:%d], data_remain %ld, bwidth %f\n", s->mem_task_queue->iter_num, iter_num,
                     s->mem_task_queue->data_remaining + s->disk_task_queue->data_remaining, 
                     s->mem_task_queue->bwidth + s->disk_task_queue->bwidth);
 
@@ -243,7 +242,7 @@ host_disk_master(void * data) {
     //unsigned long sent_this_iter = 0, sent_last_iter = 0;
     unsigned long disk_size = blk_mig_bytes_total();
     unsigned long data_remaining;
-    unsigned long bwidth;
+    double bwidth;
     Monitor *mon = s->mon;
 
     DPRINTF("Start disk master\n");
@@ -300,6 +299,7 @@ host_disk_master(void * data) {
         blk_mig_reset_dirty_cursor_master();
 
         bwidth = qemu_get_clock_ns(rt_clock) - bwidth;
+        DPRINTF("Disk send this iter %lx, bwidth %f\n", s->disk_task_queue->sent_this_iter, bwidth);
         bwidth = s->disk_task_queue->sent_this_iter / bwidth;
 
         /*
@@ -319,13 +319,11 @@ host_disk_master(void * data) {
         s->disk_task_queue->bwidth = bwidth;
         s->disk_task_queue->data_remaining = data_remaining;
 
-        DPRINTF("Disk send this iter %lx, bwidth %lx\n", s->mem_task_queue->sent_this_iter, bwidth);
-
         if (!pthread_mutex_trylock(&s->sender_barr->master_lock)) {
             /*
              * get lock fill disk info
              */
-            DPRINTF("Iter [%d:%d], disk_remain %ld, bwidth %ld\n", 
+            DPRINTF("Iter [%d:%d], disk_remain %ld, bwidth %f\n", 
                     s->disk_task_queue->iter_num,
                     iter_num, data_remaining, bwidth);
             pthread_mutex_unlock(&s->sender_barr->master_lock);
@@ -345,7 +343,7 @@ host_disk_master(void * data) {
             sent_this_iter = s->mem_task_queue->sent_this_iter + s->disk_task_queue->sent_this_iter;
             sent_last_iter = s->mem_task_queue->sent_last_iter + s->disk_task_queue->sent_last_iter;
 
-            DPRINTF("Total Iter [%d:%d], data_remain %ld, bwidth %ld\n", s->disk_task_queue->iter_num, iter_num,
+            DPRINTF("Total Iter [%d:%d], data_remain %ld, bwidth %f\n", s->disk_task_queue->iter_num, iter_num,
                     s->mem_task_queue->data_remaining + s->disk_task_queue->data_remaining, 
                     s->mem_task_queue->bwidth + s->disk_task_queue->bwidth);
 

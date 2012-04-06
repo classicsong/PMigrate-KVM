@@ -390,14 +390,14 @@ unsigned long
 ram_save_iter(int stage, struct migration_task_queue *task_queue, QEMUFile *f) {
     unsigned long bytes_transferred = 0;
 
-    /* try transferring iterative blocks of memory */
-    bytes_transferred = ram_save_block_master(task_queue);
-    
     if (stage == 3) {
         /* flush all remaining blocks regardless of rate limiting */ 
         bytes_transferred = ram_save_block_master(task_queue);
         DPRINTF("Total memory sent last iter %ld\n", bytes_transferred);
         cpu_physical_memory_set_dirty_tracking(0);
+    } else {
+        /* try transferring iterative blocks of memory */
+        bytes_transferred = ram_save_block_master(task_queue);
     }
 
     return bytes_transferred;
