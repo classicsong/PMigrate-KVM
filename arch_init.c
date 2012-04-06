@@ -483,8 +483,10 @@ static inline void *host_from_stream_offset(QEMUFile *f,
     id[len] = 0;
 
     QLIST_FOREACH(block, &ram_list.blocks, next) {
-        if (!strncmp(id, block->idstr, sizeof(id)))
+        if (!strncmp(id, block->idstr, sizeof(id))) {
+            DPRINTF("block host %p, block length %lx, %lx\n", block->host, block->length, offset);
             return block->host + offset;
+        }
     }
 
     fprintf(stderr, "Can't find block %s!\n", id);
@@ -511,7 +513,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
 
         //DPRINTF("se is %p, flags %x\n", se, flags);
         //DPRINTF("se version queue is %p\n", se->version_queue);
-        //DPRINTF("addr is %lx:%lx\n", addr, addr / TARGET_PAGE_SIZE);
+        DPRINTF("addr is %lx:%lx, flags %x\n", addr, addr / TARGET_PAGE_SIZE, flags);
         if (flags & RAM_SAVE_FLAG_MEM_SIZE) {
             /*
              * classicsong add version queue for memory
@@ -547,6 +549,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                     DPRINTF("Get mem block %s\n", id);
                     QLIST_FOREACH(block, &ram_list.blocks, next) {
                         if (!strncmp(id, block->idstr, sizeof(id))) {
+                            DPRINTF("block host %p, block length %lx\n", block->host, block->length);
                             if (block->length != length)
                                 return -EINVAL;
                             break;
@@ -592,7 +595,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
 
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
                 fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
-            vnum_p = &(se->version_queue[addr/TARGET_PAGE_SIZE]);
+            vnum_p = &(se->version_queue[addr / TARGET_PAGE_SIZE]);
 
         re_check_press:
             curr_vnum = *vnum_p;
@@ -630,7 +633,6 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
 
             ch = qemu_get_byte(f);
 
-            DPRINTF("host_addr is %p[%d]\n", host, version_id);
             memset(host, ch, TARGET_PAGE_SIZE);
 #ifndef _WIN32
             if (ch == 0 &&
@@ -695,7 +697,6 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 goto re_check_nor;
             }
 
-            DPRINTF("normal host_addr is %p[%d]\n", host, version_id);
             qemu_get_buffer(f, host, TARGET_PAGE_SIZE);
 
             /*
