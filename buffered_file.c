@@ -18,7 +18,6 @@
 #include "qemu-char.h"
 #include "buffered_file.h"
 
-//#define DEBUG_BUFFERED_FILE
 
 //classicsong
 #include <assert.h>
@@ -53,7 +52,7 @@ typedef struct QEMUFileBuffered
 /* Amount in bytes we allow ourselves to send in a burst */
 #define BURST_BUDGET (100 * 1024)
 
-#define DEBUG_BUFFERED_FILE
+//#define DEBUG_BUFFERED_FILE
 #ifdef DEBUG_BUFFERED_FILE
 #define DPRINTF(fmt, ...) \
     do { printf("buffered-file: " fmt, ## __VA_ARGS__); } while (0)
@@ -171,7 +170,6 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
      */
     if (s->budget < 0) {
         s->burst_time_us = RATE_TO_BTU / s->xfer_limit;
-        DPRINTF("Wait for budget %d, %d, %d\n", s->budget, s->xfer_limit, s->burst_time_us);
 
         if (s->last_put.tv_sec == 0) {
             s->budget += BURST_BUDGET;
@@ -211,13 +209,13 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
     while (!s->freeze_output && offset < size) {
         ret = s->put_buffer(s->opaque, buf + offset, size - offset);
         if (ret == -EAGAIN) {
-            DPRINTF("backend not ready, freezing\n");
+            fprintf(stderr, "backend not ready, freezing\n");
             s->freeze_output = 1;
             break;
         }
 
         if (ret <= 0) {
-            DPRINTF("error putting\n");
+            fprintf(stderr, "error putting\n");
             s->has_error = 1;
             offset = -EINVAL;
             break;

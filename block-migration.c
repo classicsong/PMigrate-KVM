@@ -127,6 +127,7 @@ disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f) {
     int len;
     BlkMigBlock *blk = (BlkMigBlock *)ptr;
 
+    DPRINTF("put disk data\n");
     /* sector number and flags 
      * and iter number (classicsong)
      */
@@ -885,6 +886,8 @@ block_save_iter(int stage, Monitor *mon,
 //modified by classicsong
 static int block_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
 {
+    FdMigrationState *s = (FdMigrationState *)opaque;
+
     DPRINTF("Enter save live stage %d submitted %d transferred %d\n",
             stage, block_mig_state.submitted, block_mig_state.transferred);
 
@@ -902,6 +905,7 @@ static int block_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
     if (stage == 1) {
         init_blk_migration(mon, f);
 
+        s->disk_task_queue->section_id = s->section_id;
         //start dirty track is done in disk master
         //set_dirty_tracking(1);
     }
