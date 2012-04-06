@@ -336,7 +336,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
 
             body->pages[body_len].ptr = p;
             body->pages[body_len].block = (cont == 0 ? block : NULL);
-            body->pages[body_len].addr = current_addr;
+            body->pages[body_len].addr = offset;
             body_len ++;
             body->iter_num = task_queue->iter_num;
 
