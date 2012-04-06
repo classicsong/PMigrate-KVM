@@ -465,7 +465,8 @@ static inline void *host_from_stream_offset(QEMUFile *f,
                                             ram_addr_t offset,
                                             int flags)
 {
-    static RAMBlock *block = NULL;
+    static __thread RAMBlock *block = NULL;
+    //static RAMBlock *block = NULL;
     char id[256];
     uint8_t len;
 
