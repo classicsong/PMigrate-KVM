@@ -97,7 +97,7 @@ host_memory_master(void *data) {
          * dispatch job here
          * ram_save_iter will 
          */
-        s->mem_task_queue->sent_this_iter = ram_save_iter(QEMU_VM_SECTION_PART, s->mem_task_queue, s->file);
+        s->mem_task_queue->sent_this_iter += ram_save_iter(QEMU_VM_SECTION_PART, s->mem_task_queue, s->file);
 
     skip_iter:
         /*
@@ -139,6 +139,8 @@ host_memory_master(void *data) {
         s->mem_task_queue->bwidth = bwidth;
         s->mem_task_queue->data_remaining = data_remaining;
 
+        DPRINTF("Mem send this iter %lx, bwidth %lx\n", s->mem_task_queue->sent_this_iter, bwidth);
+
         if (!pthread_mutex_trylock(&s->sender_barr->master_lock)) {
             /*
              * get lock fill memory info
@@ -177,6 +179,8 @@ host_memory_master(void *data) {
             pthread_mutex_unlock(&s->sender_barr->master_lock);
         }
 
+        //start the next iteration for slaves
+        s->sender_barr->mem_state = BARR_STATE_ITER_START;
         pthread_barrier_wait(&s->sender_barr->next_iter_barr);
 
         //total iteration number count
@@ -278,8 +282,8 @@ host_disk_master(void * data) {
          * dispatch job here
          * ram_save_iter will 
          */
-        s->disk_task_queue->sent_this_iter = block_save_iter(QEMU_VM_SECTION_PART, mon,
-                                                            s->disk_task_queue, s->file);
+        s->disk_task_queue->sent_this_iter += block_save_iter(QEMU_VM_SECTION_PART, mon,
+                                                              s->disk_task_queue, s->file);
 
     skip_iter:
         /*
@@ -314,6 +318,8 @@ host_disk_master(void * data) {
 
         s->disk_task_queue->bwidth = bwidth;
         s->disk_task_queue->data_remaining = data_remaining;
+
+        DPRINTF("Disk send this iter %lx, bwidth %lx\n", s->mem_task_queue->sent_this_iter, bwidth);
 
         if (!pthread_mutex_trylock(&s->sender_barr->master_lock)) {
             /*
@@ -353,6 +359,8 @@ host_disk_master(void * data) {
             pthread_mutex_unlock(&s->sender_barr->master_lock);
         }
 
+        //start the next iteration for slaves
+        s->sender_barr->disk_state = BARR_STATE_ITER_START;
         pthread_barrier_wait(&s->sender_barr->next_iter_barr);
 
         //total iteration number count
