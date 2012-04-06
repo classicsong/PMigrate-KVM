@@ -66,6 +66,7 @@ host_memory_master(void *data) {
     double bwidth;
     QEMUFile *f = s->file;
     int iter_num = 0;
+    int hold_lock = 0;
 
     DPRINTF("Start memory master\n");
     /*
@@ -104,6 +105,8 @@ host_memory_master(void *data) {
          * add barrier here to sync for iterations
          */
         s->sender_barr->mem_state = BARR_STATE_ITER_END;
+        hold_lock = !pthread_mutex_trylock(&s->sender_barr->master_lock);
+        
         pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
 
         /*
@@ -140,7 +143,7 @@ host_memory_master(void *data) {
         s->mem_task_queue->bwidth = bwidth;
         s->mem_task_queue->data_remaining = data_remaining;
 
-        if (!pthread_mutex_trylock(&s->sender_barr->master_lock)) {
+        if (hold_lock) {
             /*
              * get lock fill memory info
              */
@@ -244,6 +247,7 @@ host_disk_master(void * data) {
     unsigned long data_remaining;
     double bwidth;
     Monitor *mon = s->mon;
+    int hold_lock;
 
     DPRINTF("Start disk master\n");
     /*
@@ -289,6 +293,8 @@ host_disk_master(void * data) {
          * add barrier here to sync for iterations
          */
         s->sender_barr->disk_state = BARR_STATE_ITER_END;
+        hold_lock = !pthread_mutex_trylock(&s->sender_barr->master_lock);
+
         pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
 
         /*
@@ -319,7 +325,7 @@ host_disk_master(void * data) {
         s->disk_task_queue->bwidth = bwidth;
         s->disk_task_queue->data_remaining = data_remaining;
 
-        if (!pthread_mutex_trylock(&s->sender_barr->master_lock)) {
+        if (hold_lock) {
             /*
              * get lock fill disk info
              */

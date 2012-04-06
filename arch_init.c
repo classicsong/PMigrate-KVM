@@ -511,7 +511,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
 
         //DPRINTF("se is %p, flags %x\n", se, flags);
         //DPRINTF("se version queue is %p\n", se->version_queue);
-        DPRINTF("addr is %lx:%lx\n", addr, addr / TARGET_PAGE_SIZE);
+        //DPRINTF("addr is %lx:%lx\n", addr, addr / TARGET_PAGE_SIZE);
         if (flags & RAM_SAVE_FLAG_MEM_SIZE) {
             /*
              * classicsong add version queue for memory
@@ -594,6 +594,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
             vnum_p = &(se->version_queue[addr/TARGET_PAGE_SIZE]);
 
+            DPRINTF("total size %lx, vnum_p addr is %lx[%p]\n", se->total_size, addr / TARGET_PAGE_SIZE, vnum_p);
         re_check_press:
             curr_vnum = *vnum_p;
 
@@ -615,8 +616,10 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
              * curr_vnum set to 4 means current memory version is updated to 1
              * curr_vnum set to 3 means current memory is updating to 1
              */
-            if (curr_vnum > mem_vnum * 2)
+            if (curr_vnum > mem_vnum * 2) {
+                ch = qemu_get_byte(f);
                 continue;
+            }
 
             /*
              * now we will hold the page
@@ -656,6 +659,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
             vnum_p = &(se->version_queue[addr/TARGET_PAGE_SIZE]);
 
+            DPRINTF("total size %lx, vnum_p addr is %lx[%p]\n", se->total_size, addr / TARGET_PAGE_SIZE, vnum_p);
         re_check_nor:
             curr_vnum = *vnum_p;
 
