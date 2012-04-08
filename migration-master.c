@@ -73,9 +73,10 @@ host_memory_master(void *data) {
      * wait for all slaves and master to be ready
      */
     pthread_barrier_wait(&(s->sender_barr->sender_iter_barr));
+    s->mem_task_queue->sent_last_iter = memory_size;
     s->sender_barr->mem_state = BARR_STATE_ITER_START;
 
-    DPRINTF("Start processing memory\n");
+    DPRINTF("Start processing memory, %lx\n", s->mem_task_queue->sent_last_iter);
     /*
      * Get dirty bitmap first
      * And start dirty tracking
@@ -166,11 +167,11 @@ host_memory_master(void *data) {
             sent_this_iter = s->mem_task_queue->sent_this_iter + s->disk_task_queue->sent_this_iter;
             sent_last_iter = s->mem_task_queue->sent_last_iter + s->disk_task_queue->sent_last_iter;
 
-            DPRINTF("Total Iter [%d:%d], data_remain %ld, bwidth %f\n", s->mem_task_queue->iter_num, iter_num,
+            DPRINTF("Total Iter [%d:%d], data_remain %lx, bwidth %f\n", s->mem_task_queue->iter_num, iter_num,
                     s->mem_task_queue->data_remaining + s->disk_task_queue->data_remaining, 
                     s->mem_task_queue->bwidth + s->disk_task_queue->bwidth);
 
-            DPRINTF("Sent this iter %ld, sent last iter %ld", sent_this_iter, sent_last_iter);
+            DPRINTF("Sent this iter %lx, sent last iter %lx", sent_this_iter, sent_last_iter);
 
             if (total_expected_downtime < s->para_config->max_downtime ||
                 sent_this_iter > sent_last_iter ||
@@ -216,6 +217,10 @@ host_memory_master(void *data) {
     pthread_barrier_wait(&s->last_barr);
     ram_save_iter(QEMU_VM_SECTION_END, s->mem_task_queue, s->file);
 
+
+    //wait for slave end
+    s->sender_barr->mem_state = BARR_STATE_ITER_TERMINATE;
+    pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
     //last iteration end
     pthread_barrier_wait(&s->last_barr);
 
@@ -265,6 +270,7 @@ host_disk_master(void * data) {
      * wait for all slaves and master to be ready
      */
     pthread_barrier_wait(&(s->sender_barr->sender_iter_barr));
+    s->disk_task_queue->sent_last_iter = disk_size;
     s->sender_barr->disk_state = BARR_STATE_ITER_START;
 
     /* Enable dirty disk tracking */
@@ -400,6 +406,9 @@ host_disk_master(void * data) {
     pthread_barrier_wait(&s->last_barr);
     block_save_iter(QEMU_VM_SECTION_END, s->mon, s->mem_task_queue, s->file);
 
+    //wait for slave end
+    s->sender_barr->disk_state = BARR_STATE_ITER_TERMINATE;
+    pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
     //last iteration end
     pthread_barrier_wait(&s->last_barr);
 

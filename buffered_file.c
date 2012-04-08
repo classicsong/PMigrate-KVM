@@ -338,8 +338,9 @@ static int buffered_close(void *opaque)
 
     ret = s->close(s->opaque);
 
-    qemu_del_timer(s->timer);
-    qemu_free_timer(s->timer);
+    //classicsong we do not use timer from migration
+    //qemu_del_timer(s->timer);
+    //qemu_free_timer(s->timer);
     qemu_free(s->buffer);
     qemu_free(s);
 

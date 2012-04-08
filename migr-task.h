@@ -74,6 +74,7 @@ static inline void __list_del(struct linked_list *prev, struct linked_list *next
 #define BARR_STATE_ITER_START 1
 #define BARR_STATE_ITER_END 2
 #define BARR_STATE_SKIP 3
+#define BARR_STATE_ITER_TERMINATE 4
 
 struct migration_barrier {
     volatile int mem_state;

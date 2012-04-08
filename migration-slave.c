@@ -180,7 +180,8 @@ start_host_slave(void *data) {
     while (1) {
         /* check for disk */
         if (queue_pop_task(s->disk_task_queue, &body) > 0) {
-            DPRINTF("get disk task, %d\n", s->mem_task_queue->iter_num);
+            DPRINTF("get disk task, %d, section id %d\n", s->mem_task_queue->iter_num,
+                    s->mem_task_queue->section_id);
 
             /* Section type */
             qemu_put_byte(f, QEMU_VM_SECTION_PART);
@@ -200,7 +201,8 @@ start_host_slave(void *data) {
         }
         /* check for memory */
         else if (queue_pop_task(s->mem_task_queue, &body) > 0) {
-            DPRINTF("get mem task, %lx, %d\n", body->pages[0].addr, s->mem_task_queue->iter_num);
+            DPRINTF("get mem task, %lx, %d, section id %d\n", body->pages[0].addr, 
+                    s->mem_task_queue->iter_num, s->mem_task_queue->section_id);
             /* Section type */
             qemu_put_byte(f, QEMU_VM_SECTION_PART);
             qemu_put_be32(f, s->mem_task_queue->section_id);
@@ -224,6 +226,12 @@ start_host_slave(void *data) {
                 pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
                 pthread_barrier_wait(&s->sender_barr->next_iter_barr);
             }
+            else if (s->sender_barr->mem_state == BARR_STATE_ITER_TERMINATE &&
+                     s->sender_barr->disk_state == BARR_STATE_ITER_TERMINATE) {
+                DPRINTF("Last Iteration End\n");
+                pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
+                break;
+            }
 
             DPRINTF("No task left\n");
             //get nothing, wait for a moment
@@ -231,6 +239,7 @@ start_host_slave(void *data) {
         }
     }
 
+    DPRINTF("slave terminate\n");
     return NULL;
 }
 
