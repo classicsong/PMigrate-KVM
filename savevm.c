@@ -1903,7 +1903,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers) {
         /*
          * start modifying here tomorrow
          */
-        DPRINTF("get incomming commands %d\n", section_type);
+        //DPRINTF("get incomming commands %d\n", section_type);
         switch (section_type) {
         case QEMU_VM_SECTION_PART:
         case QEMU_VM_SECTION_END:
@@ -1921,7 +1921,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers) {
                 goto out;
             }
 
-            DPRINTF("slave handle task %d\n", section_id);
+            //DPRINTF("slave handle task %d\n", section_id);
             /*
              * ram use ram_load
              * disk use block_load
