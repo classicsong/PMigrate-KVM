@@ -172,7 +172,6 @@ start_host_slave(void *data) {
 
     DPRINTF("slave start migration\n");
 
-    sleep(10);
     /*
      * wait for following commands
      * As disk task maybe limited by the disk throughput, so we perfer to transfer disk first and then memory

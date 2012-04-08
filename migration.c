@@ -436,7 +436,6 @@ migrate_fd_put(void *opaque) {
      */
     pthread_barrier_wait(&s->last_barr);
     DPRINTF("before End of ALL\n");
-    sleep(2);
     if (qemu_savevm_nolive_state(s->mon, s->file) < 0) {
         if (old_vm_running) {
             vm_start();

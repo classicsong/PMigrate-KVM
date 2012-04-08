@@ -417,6 +417,17 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
      */
     if (stage == 1) {
         RAMBlock *block;
+
+        /*
+         * Get dirty bitmap first
+         * And start dirty tracking
+         */
+        if (cpu_physical_sync_dirty_bitmap(0, TARGET_PHYS_ADDR_MAX) != 0) {
+            fprintf(stderr, "get dirty bitmap error\n");
+            qemu_file_set_error(f);
+            return NULL;
+        }
+
         bytes_transferred = 0;
         last_block = NULL;
         last_offset = 0;
@@ -432,6 +443,9 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
                 }
             }
         }
+
+        /* Enable dirty memory tracking */
+        cpu_physical_memory_set_dirty_tracking(1);
 
         qemu_put_be64(f, ram_bytes_total() | RAM_SAVE_FLAG_MEM_SIZE);
 

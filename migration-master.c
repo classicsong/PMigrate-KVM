@@ -77,18 +77,6 @@ host_memory_master(void *data) {
     s->sender_barr->mem_state = BARR_STATE_ITER_START;
 
     DPRINTF("Start processing memory, %lx\n", s->mem_task_queue->sent_last_iter);
-    /*
-     * Get dirty bitmap first
-     * And start dirty tracking
-     */
-    if (cpu_physical_sync_dirty_bitmap(0, TARGET_PHYS_ADDR_MAX) != 0) {
-        fprintf(stderr, "get dirty bitmap error\n");
-        qemu_file_set_error(f);
-        return NULL;
-    }
-
-    /* Enable dirty memory tracking */
-    cpu_physical_memory_set_dirty_tracking(1);
 
     do {
         bwidth = qemu_get_clock_ns(rt_clock);
