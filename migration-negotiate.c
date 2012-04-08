@@ -25,6 +25,7 @@
 int 
 qemu_savevm_state_negotiate(FdMigrationState *s, QEMUFile *f) {
     int num_ips = s->para_config->num_ips;
+    int num_slaves = s->para_config->num_slaves;
     struct ip_list *tmp_ip_list = s->para_config->dest_ip_list;
     int i;
 
@@ -35,6 +36,7 @@ qemu_savevm_state_negotiate(FdMigrationState *s, QEMUFile *f) {
      */
     DPRINTF("Negotiating, %d, %p\n", num_ips, tmp_ip_list);
     qemu_put_byte(f, QEMU_VM_SECTION_NEGOTIATE);
+    qemu_put_be32(f, num_slaves);
     qemu_put_be32(f, num_ips);
 
     qemu_put_be32(f, s->para_config->SSL_type);

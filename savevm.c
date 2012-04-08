@@ -1914,6 +1914,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers) {
                     break;
                 }
             }
+
             if (le == NULL) {
                 fprintf(stderr, "Unknown savevm section %d\n", section_id);
                 ret = -EINVAL;
@@ -1939,7 +1940,9 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers) {
     return;
 }
 
-extern pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers);
+extern pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers, 
+                                   pthread_barrier_t *end_barrier);
+
 static struct migration_slave *dest_slave_list = NULL;
 
 int qemu_loadvm_state(QEMUFile *f)
@@ -1950,6 +1953,7 @@ int qemu_loadvm_state(QEMUFile *f)
     uint8_t section_type;
     unsigned int v;
     int ret;
+    pthread_barrier_t end_barrier;
 
     if (qemu_savevm_state_blocked(default_mon)) {
         return -EINVAL;
@@ -1979,7 +1983,7 @@ int qemu_loadvm_state(QEMUFile *f)
         int len;
 
         //classicsong add this
-        int num_ips, ssl_type, i;
+        int num_slaves, num_ips, ssl_type, i;
         uint8_t ip_buf[32];               //32 bytes is enough for dest_ip:port
 
         DPRINTF("section type %d\n", section_type);
@@ -2056,9 +2060,15 @@ int qemu_loadvm_state(QEMUFile *f)
              */
         case QEMU_VM_SECTION_NEGOTIATE:
             DPRINTF("In negotiation section\n");
+            num_slaves = qemu_get_be32(f);
             num_ips = qemu_get_be32(f);
             ssl_type = qemu_get_be32(f);
 
+            /*
+             * Init sync point of the end of all end in the dest
+             * We have one master and several slaves in the dest
+             */
+            pthread_barrier_init(&end_barrier, NULL, num_slaves + 1);
             /*
              * creating dest slaves
              */
@@ -2069,7 +2079,7 @@ int qemu_loadvm_state(QEMUFile *f)
                 qemu_get_buffer(f, ip_buf, len);
                 ip_buf[len] = 0;
                 DPRINTF("get data %s\n", ip_buf);
-                tid = create_dest_slave((char *)ip_buf, ssl_type, &loadvm_handlers);
+                tid = create_dest_slave((char *)ip_buf, ssl_type, &loadvm_handlers, &end_barrier);
                 struct migration_slave *slave = (struct migration_slave *)malloc(sizeof(struct migration_slave));
                 slave->slave_id = tid;
                 slave->next = dest_slave_list;
@@ -2083,6 +2093,8 @@ int qemu_loadvm_state(QEMUFile *f)
         }
     }
 
+    DPRINTF("Hit End Barrier Master\n");
+    pthread_barrier_wait(&end_barrier);
     DPRINTF("Get out of qemu_loadvm_state\n");
 
     cpu_synchronize_all_post_init();

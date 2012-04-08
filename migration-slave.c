@@ -229,6 +229,8 @@ start_host_slave(void *data) {
             else if (s->sender_barr->mem_state == BARR_STATE_ITER_TERMINATE &&
                      s->sender_barr->disk_state == BARR_STATE_ITER_TERMINATE) {
                 DPRINTF("Last Iteration End\n");
+                qemu_put_byte(f, QEMU_VM_EOF);
+                qemu_fflush(f);
                 pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
                 break;
             }
@@ -279,6 +281,7 @@ struct dest_slave_para{
     char *listen_ip;
     int ssl_type;
     void *handlers;
+    pthread_barrier_t *end_barrier;
 };
 
 //static int slave_loadvm_state(void) {
@@ -359,6 +362,8 @@ void *start_dest_slave(void *data) {
      */
     slave_process_incoming_migration(f, para->handlers);
 
+    pthread_barrier_wait(para->end_barrier);    
+    DPRINTF("Dest slave end");
     //slave_loadvm_state();
 
  err2:
@@ -369,9 +374,9 @@ void *start_dest_slave(void *data) {
     free(para);
     return NULL;
 }
-pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers);
+pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers, pthread_barrier_t *end_barrier);
 
-pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers) {
+pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers, pthread_barrier_t *end_barrier) {
     struct dest_slave_para *data = (struct dest_slave_para *)malloc(sizeof(struct dest_slave_para));
     pthread_t tid;
 
@@ -380,6 +385,7 @@ pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers
     data->listen_ip = listen_ip;
     data->ssl_type = ssl_type;
     data->handlers = loadvm_handlers;
+    data->end_barrier = end_barrier;
     pthread_create(&tid, NULL, start_dest_slave, data);
 
     return tid;
