@@ -485,7 +485,7 @@ static inline void *host_from_stream_offset(QEMUFile *f,
 
     QLIST_FOREACH(block, &ram_list.blocks, next) {
         if (!strncmp(id, block->idstr, sizeof(id))) {
-            DPRINTF("block host %p, block length %lx, %lx\n", block->host, block->length, offset);
+            //DPRINTF("block host %p, block length %lx, %lx\n", block->host, block->length, offset);
             return block->host + offset;
         }
     }
