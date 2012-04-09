@@ -42,7 +42,7 @@
 #define DISK_NEGOTIATE                 0x3f
 
 
-//#define DEBUG_BLK_MIGRATION
+#define DEBUG_BLK_MIGRATION
 
 #ifdef DEBUG_BLK_MIGRATION
 #define DPRINTF(fmt, ...) \
@@ -330,6 +330,11 @@ static void set_dirty_tracking(int enable)
     }
 }
 
+void set_dirty_tracking_master(int enable);
+
+void set_dirty_tracking_master(int enable) {
+    set_dirty_tracking(enable);
+}
 /*
  * classicsong
  * add a para QEMUFile for init_blk_migration_it
@@ -904,7 +909,7 @@ static int block_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
 
         s->disk_task_queue->section_id = s->section_id;
         //start dirty track
-        set_dirty_tracking(1);
+        //set_dirty_tracking(1);
     }
 
     flush_blks(f);

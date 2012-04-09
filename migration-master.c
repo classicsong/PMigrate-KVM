@@ -260,6 +260,9 @@ host_disk_master(void * data) {
     s->disk_task_queue->sent_last_iter = disk_size;
     s->sender_barr->disk_state = BARR_STATE_ITER_START;
 
+    /* Enable dirty disk tracking */
+    set_dirty_tracking_master(1);
+
     blk_mig_reset_dirty_cursor_master();
 
     do {

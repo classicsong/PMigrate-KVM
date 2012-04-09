@@ -81,7 +81,7 @@ tcp_start_outgoing_migration_slave(Monitor *mon,
                                    int SSL_type) {
     FdMigrationStateSlave *s;
 
-    DPRINTF("Creating migration slave structure");
+    DPRINTF("Creating migration slave structure\n");
     s = qemu_mallocz(sizeof(*s));
 
     s->get_error = socket_errno_slave;//report socket error

@@ -34,7 +34,6 @@ qemu_savevm_state_negotiate(FdMigrationState *s, QEMUFile *f) {
      * 1. num of dest ip used
      * 2. SSL type
      */
-    DPRINTF("Negotiating, %d, %p\n", num_ips, tmp_ip_list);
     qemu_put_byte(f, QEMU_VM_SECTION_NEGOTIATE);
     qemu_put_be32(f, num_slaves);
     qemu_put_be32(f, num_ips);
