@@ -243,7 +243,7 @@ static void blk_mig_read_cb(void *opaque, int ret)
 
     if ( blk->done == 0 && hold_block_cb(&blk->done) ) {
 
-        DPRINTF("get callback, id %d, blk %p, ret %d\n", pthread_self(), blk, ret);
+        DPRINTF("get callback, id %lx, blk %p, ret %d\n", pthread_self(), blk, ret);
         blk->ret = ret;
 
         blk->time = qemu_get_clock_ns(rt_clock) - blk->time;
@@ -256,7 +256,7 @@ static void blk_mig_read_cb(void *opaque, int ret)
         block_mig_state.submitted--;
         block_mig_state.read_done++;
     } else 
-        DPRINTF("Drop, id %d, blk %p, ret %d\n", pthread_self(), blk, ret);
+        DPRINTF("Drop, id %lx, blk %p[%d], ret %d\n", pthread_self(), blk, blk->done, ret);
 
     if (block_mig_state.submitted < 0)
         fprintf(stderr, "submitted %d < 0\n", block_mig_state.submitted);
@@ -502,6 +502,7 @@ static int mig_save_device_dirty(Monitor *mon, QEMUFile *f,
             blk->sector = sector;
             blk->nr_sectors = nr_sectors;
 
+            blk->done = 0;
             if (is_async) {
                 blk->iov.iov_base = blk->buf;
                 blk->iov.iov_len = nr_sectors * BDRV_SECTOR_SIZE;
@@ -767,6 +768,7 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
             blk->bmds = bmds;
             blk->sector = sector;
             blk->nr_sectors = nr_sectors;
+            blk->done = 0;
     
             if (bdrv_read(bmds->bs, sector, blk->buf,
                           nr_sectors) < 0) {
