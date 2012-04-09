@@ -251,6 +251,8 @@ static void blk_mig_read_cb(void *opaque, int ret)
 
     block_mig_state.submitted--;
     block_mig_state.read_done++;
+    if (block_mig_state.submitted < 0)
+        fprintf(stderr, "submitted %d < 0\n", block_mig_state.submitted);
     assert(block_mig_state.submitted >= 0);
 }
 
