@@ -433,6 +433,9 @@ static int posix_aio_process_queue(void *opaque)
             if (!acb)
                 return result;
 
+            //classicsong
+            if (acb->next == acb)
+                fprintf(stderr, "cycle linked aio list\n");
             /* we're only interested in requests in the right context */
             if (acb->async_context_id != async_context_id) {
                 pacb = &acb->next;
