@@ -239,7 +239,7 @@ static void blk_mig_read_cb(void *opaque, int ret)
 {
     BlkMigBlock *blk = opaque;
 
-    DPRINTF("get callback\n");
+    DPRINTF("get callback, id %d, blk %p, ret %d\n", pthread_self(), blk, ret);
     blk->ret = ret;
 
     blk->time = qemu_get_clock_ns(rt_clock) - blk->time;
