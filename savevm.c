@@ -1552,6 +1552,10 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
     if (s->para_config != NULL)
         init_host_slaves(s);
 
+    //check for no live
+    DPRINTF("check for no live in begin after negotiation\n");
+    sleep(60);
+    DPRINTF("check for no live in begin after negotiation END!!\n");
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
         int len;
 
