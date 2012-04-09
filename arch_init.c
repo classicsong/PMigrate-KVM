@@ -362,8 +362,6 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
             //hit the iteration end
             if (!block) {
                 DPRINTF("Hit memory iteration end\n");
-		//check for no live
-		sleep(100);
                 break;
             }
         }
