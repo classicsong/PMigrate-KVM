@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <signal.h>
 
 #include "qemu-common.h"
 #include "qemu_socket.h"
@@ -241,6 +242,13 @@ host_disk_master(void * data) {
     double bwidth;
     Monitor *mon = s->mon;
     int hold_lock;
+    sigset_t set;
+
+    sigemptyset(&set);
+    sigaddset(&set, SIGUSR2);
+    sigaddset(&set, SIGIO);
+    sigaddset(&set, SIGALRM);
+    sigprocmask(SIG_BLOCK, &set, NULL);
 
     DPRINTF("Start disk master, %lx\n", pthread_self());
     /*
