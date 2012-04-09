@@ -427,7 +427,7 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
         if (cpu_physical_sync_dirty_bitmap(0, TARGET_PHYS_ADDR_MAX) != 0) {
             fprintf(stderr, "get dirty bitmap error\n");
             qemu_file_set_error(f);
-            return NULL;
+            return -1;
         }
 
         bytes_transferred = 0;
@@ -480,7 +480,7 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
 static inline void *host_from_stream_offset(QEMUFile *f,
                                             ram_addr_t offset,
                                             int flags,
-					    uint32_t **vnum_addr)
+                                            unsigned long *index)
 {
     static __thread RAMBlock *block = NULL;
     //static RAMBlock *block = NULL;
@@ -493,7 +493,7 @@ static inline void *host_from_stream_offset(QEMUFile *f,
             return NULL;
         }
 
-	*vnum_addr = block->offset + offset;
+        *index = block->offset + offset;
         return block->host + offset;
     }
 
@@ -505,7 +505,7 @@ static inline void *host_from_stream_offset(QEMUFile *f,
         if (!strncmp(id, block->idstr, sizeof(id))) {
             DPRINTF("block host %p, block length %lx, %lx\n", block->host, block->length, 
 		    block->offset + offset);
-	    *vnum_addr = block->offset + offset;
+            *index = block->offset + offset;
             return block->host + offset;
         }
     }
@@ -604,12 +604,13 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             uint32_t mem_vnum = ((flags & MEM_VNUM_MASK) >> MEM_VNUM_OFFSET);
             uint32_t curr_vnum;
             volatile uint32_t *vnum_p;
+            unsigned long index = 0;
 
             //DPRINTF("handle compress\n");
             if (version_id == 3)
                 host = qemu_get_ram_ptr(addr);
             else
-	        host = host_from_stream_offset(f, addr, flags, &vnum_p);
+                host = host_from_stream_offset(f, addr, flags, &index);
             if (!host) {
                 return -EINVAL;
             }
@@ -617,6 +618,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
                 fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
 
+            vnum_p = &(se->version_queue[index]);
         re_check_press:
             curr_vnum = *vnum_p;
 
@@ -670,16 +672,18 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             uint32_t mem_vnum = ((flags & MEM_VNUM_MASK) >> MEM_VNUM_OFFSET);
             uint32_t curr_vnum;
             volatile uint32_t *vnum_p;
+            unsigned long index = 0;
 
             //DPRINTF("handle normal page\n");
             if (version_id == 3)
                 host = qemu_get_ram_ptr(addr);
             else
-	        host = host_from_stream_offset(f, addr, flags, vnum_p);
+	        host = host_from_stream_offset(f, addr, flags, &index);
 
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
                 fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
 
+            vnum_p = &(se->version_queue[index]);
         re_check_nor:
             curr_vnum = *vnum_p;
 
