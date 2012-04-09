@@ -1,3 +1,5 @@
+#include <signal.h>
+
 #include "qemu-common.h"
 #include "qemu_socket.h"
 #include "migration.h"
@@ -121,6 +123,13 @@ start_host_slave(void *data) {
     int i, ret;
     QEMUFile *f;
     struct timespec slave_sleep = {0, 1000000};
+    sigset_t set;
+
+    sigemptyset(&set);
+    sigaddset(&set, SIGUSR2);
+    sigaddset(&set, SIGIO);
+    sigaddset(&set, SIGALRM);
+    sigprocmask(SIG_BLOCK, &set, NULL);
 
     if (parse_host_port(&addr, s->dest_ip) < 0) {
         fprintf(stderr, "wrong dest ip %s\n", s->dest_ip);

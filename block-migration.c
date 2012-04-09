@@ -255,7 +255,9 @@ static void blk_mig_read_cb(void *opaque, int ret)
 
         block_mig_state.submitted--;
         block_mig_state.read_done++;
-    }
+    } else 
+        DPRINTF("get drop, id %lx, blk %p, ret %d\n", pthread_self(), blk, ret);
+
 
     if (block_mig_state.submitted < 0)
         fprintf(stderr, "submitted %d < 0\n", block_mig_state.submitted);

@@ -10,6 +10,7 @@
  * the COPYING file in the top-level directory.
  *
  */
+#include <signal.h>
 
 #include "qemu-common.h"
 #include "migration.h"
@@ -417,6 +418,13 @@ migrate_fd_put(void *opaque) {
     FdMigrationState *s = opaque;
     int old_vm_running = vm_running;
     int state;
+    sigset_t set;
+
+    sigemptyset(&set);
+    sigaddset(&set, SIGUSR2);
+    sigaddset(&set, SIGIO);
+    sigaddset(&set, SIGALRM);
+    sigprocmask(SIG_BLOCK, &set, NULL);
 
     if (s->state != MIG_STATE_ACTIVE) {
         DPRINTF("put_ready returning because of non-active state\n");

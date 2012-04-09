@@ -68,6 +68,13 @@ host_memory_master(void *data) {
     QEMUFile *f = s->file;
     int iter_num = 0;
     int hold_lock = 0;
+    sigset_t set;
+
+    sigemptyset(&set);
+    sigaddset(&set, SIGUSR2);
+    sigaddset(&set, SIGIO);
+    sigaddset(&set, SIGALRM);
+    sigprocmask(SIG_BLOCK, &set, NULL);
 
     DPRINTF("Start memory master\n");
     /*
