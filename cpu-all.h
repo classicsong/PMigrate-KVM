@@ -930,7 +930,6 @@ static inline void cpu_physical_memory_set_dirty(ram_addr_t addr)
 static inline int cpu_physical_memory_set_dirty_flags(ram_addr_t addr,
                                                       int dirty_flags)
 {
-    fprintf(stderr, "set dirty flag called\n");
     return ram_list.phys_dirty[addr >> TARGET_PAGE_BITS] |= dirty_flags;
 }
 
