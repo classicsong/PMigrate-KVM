@@ -897,6 +897,7 @@ static int block_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
     }
 
     if (stage == 1) {
+        DPRINTF("Init block migration\n");
         init_blk_migration(mon, f);
 
         s->disk_task_queue->section_id = s->section_id;
