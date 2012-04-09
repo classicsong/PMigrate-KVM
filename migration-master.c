@@ -242,7 +242,7 @@ host_disk_master(void * data) {
     Monitor *mon = s->mon;
     int hold_lock;
 
-    DPRINTF("Start disk master\n");
+    DPRINTF("Start disk master, %ld\n", pthread_self());
     /*
      * no need for disk migration
      */
