@@ -75,6 +75,8 @@ typedef struct BlkMigBlock {
     BlockDriverAIOCB *aiocb;
     int ret;
     int64_t time;
+    //classicsong
+    volatile uint32_t done;
     QSIMPLEQ_ENTRY(BlkMigBlock) entry;
 } BlkMigBlock;
 
@@ -239,18 +241,23 @@ static void blk_mig_read_cb(void *opaque, int ret)
 {
     BlkMigBlock *blk = opaque;
 
-    DPRINTF("get callback, id %d, blk %p, ret %d\n", pthread_self(), blk, ret);
-    blk->ret = ret;
+    if ( blk->done == 0 && hold_block_cb(&blk->done) ) {
 
-    blk->time = qemu_get_clock_ns(rt_clock) - blk->time;
+        DPRINTF("get callback, id %d, blk %p, ret %d\n", pthread_self(), blk, ret);
+        blk->ret = ret;
 
-    add_avg_read_time(blk->time);
+        blk->time = qemu_get_clock_ns(rt_clock) - blk->time;
 
-    QSIMPLEQ_INSERT_TAIL(&block_mig_state.blk_list, blk, entry);
-    bmds_set_aio_inflight(blk->bmds, blk->sector, blk->nr_sectors, 0);
+        add_avg_read_time(blk->time);
 
-    block_mig_state.submitted--;
-    block_mig_state.read_done++;
+        QSIMPLEQ_INSERT_TAIL(&block_mig_state.blk_list, blk, entry);
+        bmds_set_aio_inflight(blk->bmds, blk->sector, blk->nr_sectors, 0);
+
+        block_mig_state.submitted--;
+        block_mig_state.read_done++;
+    } else 
+        DPRINTF("Drop, id %d, blk %p, ret %d\n", pthread_self(), blk, ret);
+
     if (block_mig_state.submitted < 0)
         fprintf(stderr, "submitted %d < 0\n", block_mig_state.submitted);
     assert(block_mig_state.submitted >= 0);
@@ -300,6 +307,8 @@ static int mig_save_device_bulk(Monitor *mon, QEMUFile *f,
     qemu_iovec_init_external(&blk->qiov, &blk->iov, 1);
 
     blk->time = qemu_get_clock_ns(rt_clock);
+    //classicsong
+    blk->done = 0;
 
     blk->aiocb = bdrv_aio_readv(bs, cur_sector, &blk->qiov,
                                 nr_sectors, blk_mig_read_cb, blk);

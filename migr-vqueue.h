@@ -34,4 +34,8 @@ release_block(volatile uint32_t *v_p, uint32_t new_vnum) {
     *v_p = new_vnum * 2 + 2;
 }
 
+static int 
+hold_block_cb(volatile uint32_t *v_p) {
+    return (atomic_compare_exchange32(v_p, 0, 1) != 0);
+}
 #endif
