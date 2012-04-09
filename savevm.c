@@ -1520,6 +1520,11 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
     qemu_put_be32(f, QEMU_VM_FILE_VERSION);
 
     qemu_fflush(f);
+    //check for no live
+    DPRINTF("check for no live in begin before negotiation\n");
+    sleep(60);
+    DPRINTF("check for no live in begin before negotiation END!!\n");
+
     /*
      * classicsong
      * negotiate parallel migration
@@ -1544,6 +1549,10 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
     s->master_list = NULL;
     s->slave_list = NULL;
 
+    //check for no live
+    DPRINTF("check for no live in begin after negotiation\n");
+    sleep(60);
+    DPRINTF("check for no live in begin after negotiation END!!\n");
     pthread_barrier_init(&s->last_barr, NULL, 3);
     s->laster_iter = 0;
     /*
@@ -1552,10 +1561,6 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
     if (s->para_config != NULL)
         init_host_slaves(s);
 
-    //check for no live
-    DPRINTF("check for no live in begin after negotiation\n");
-    sleep(60);
-    DPRINTF("check for no live in begin after negotiation END!!\n");
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
         int len;
 

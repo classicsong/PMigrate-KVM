@@ -72,9 +72,6 @@ host_memory_master(void *data) {
     /*
      * wait for all slaves and master to be ready
      */
-    DPRINTF("check for no live in mem master start\n");
-    sleep(60);
-    DPRINTF("check for no live in mem master END!!\n");
     pthread_barrier_wait(&(s->sender_barr->sender_iter_barr));
     s->mem_task_queue->sent_last_iter = memory_size;
     s->sender_barr->mem_state = BARR_STATE_ITER_START;

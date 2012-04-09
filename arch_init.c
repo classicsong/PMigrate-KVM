@@ -493,7 +493,7 @@ static inline void *host_from_stream_offset(QEMUFile *f,
             return NULL;
         }
 
-        *index = block->offset + offset;
+        *index = (block->offset + offset) / TARGET_PAGE_SIZE;
         return block->host + offset;
     }
 
@@ -505,7 +505,7 @@ static inline void *host_from_stream_offset(QEMUFile *f,
         if (!strncmp(id, block->idstr, sizeof(id))) {
             DPRINTF("block host %p, block length %lx, %lx\n", block->host, block->length, 
 		    block->offset + offset);
-            *index = block->offset + offset;
+            *index = (block->offset + offset) / TARGET_PAGE_SIZE;
             return block->host + offset;
         }
     }
@@ -618,6 +618,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
                 fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
 
+            assert(index < se->total_size);
             vnum_p = &(se->version_queue[index]);
         re_check_press:
             curr_vnum = *vnum_p;
@@ -683,6 +684,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
                 fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
 
+            assert(index < se->total_size);
             vnum_p = &(se->version_queue[index]);
         re_check_nor:
             curr_vnum = *vnum_p;
