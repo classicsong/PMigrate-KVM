@@ -406,6 +406,7 @@ void migrate_fd_connect(FdMigrationState *s)
      * The main process has to wait for last interation in migrate_fd_put first
      */
     //migrate_fd_put_ready(s);
+    DPRINTF("main thread id %lx\n", pthread_self());
     pthread_create(&root_master, NULL, migrate_fd_put, s);
 }
 
@@ -421,6 +422,8 @@ migrate_fd_put(void *opaque) {
         DPRINTF("put_ready returning because of non-active state\n");
         return;
     }
+
+    DPRINTF("monitor thread id %lx\n", pthread_self());
 
     pthread_barrier_wait(&s->last_barr);
     DPRINTF("END migration\n");
