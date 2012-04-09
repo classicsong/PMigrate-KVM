@@ -372,15 +372,15 @@ static void init_blk_migration_it(void *opaque, BlockDriverState *bs)
 
         block_mig_state.total_sector_sum += sectors;
 
-	/* classicsong
-	 * we will negotiate the bs size and name to the target machine
-	 */
-	qemu_put_be64(f, DISK_NEGOTIATE << DISK_VNUM_OFFSET);
-	len = strlen(bs->device_name);
-	qemu_put_byte(f, len);
-	qemu_put_buffer(f, (uint8_t *)bs->device_name, len);
-	qemu_put_be64(f, sectors);
-	DPRINTF("NEGOTIATE disk bs %s, size %ld\n", bs->device_name, sectors);
+        /* classicsong
+         * we will negotiate the bs size and name to the target machine
+         */
+        qemu_put_be64(f, DISK_NEGOTIATE << DISK_VNUM_OFFSET);
+        len = strlen(bs->device_name);
+        qemu_put_byte(f, len);
+        qemu_put_buffer(f, (uint8_t *)bs->device_name, len);
+        qemu_put_be64(f, sectors);
+        DPRINTF("NEGOTIATE disk bs %s, size %ld\n", bs->device_name, sectors);
 	
         if (bmds->shared_base) {
             monitor_printf(mon, "Start migration for %s with shared base "
