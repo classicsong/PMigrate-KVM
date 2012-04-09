@@ -72,6 +72,9 @@ host_memory_master(void *data) {
     /*
      * wait for all slaves and master to be ready
      */
+    DPRINTF("check for no live in mem master start\n");
+    sleep(60);
+    DPRINTF("check for no live in mem master END!!\n");
     pthread_barrier_wait(&(s->sender_barr->sender_iter_barr));
     s->mem_task_queue->sent_last_iter = memory_size;
     s->sender_barr->mem_state = BARR_STATE_ITER_START;
@@ -261,13 +264,10 @@ host_disk_master(void * data) {
     s->disk_task_queue->sent_last_iter = disk_size;
     s->sender_barr->disk_state = BARR_STATE_ITER_START;
 
-    /* Enable dirty disk tracking */
-    set_dirty_tracking_master(1);
-
     blk_mig_reset_dirty_cursor_master();
 
     do {
-        DPRINTF("Start iteration %d\n", s->disk_task_queue->iter_num);
+        DPRINTF("Start Disk iteration %d\n", s->disk_task_queue->iter_num);
         bwidth = qemu_get_clock_ns(rt_clock);
 
         if (qemu_file_has_error(s->file)) {

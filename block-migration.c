@@ -328,12 +328,6 @@ static void set_dirty_tracking(int enable)
     }
 }
 
-void set_dirty_tracking_master(int enable);
-
-void set_dirty_tracking_master(int enable) {
-    set_dirty_tracking(enable);
-}
-
 /*
  * classicsong
  * add a para QEMUFile for init_blk_migration_it
@@ -906,8 +900,8 @@ static int block_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
         init_blk_migration(mon, f);
 
         s->disk_task_queue->section_id = s->section_id;
-        //start dirty track is done in disk master
-        //set_dirty_tracking(1);
+        //start dirty track
+        set_dirty_tracking(1);
     }
 
     flush_blks(f);

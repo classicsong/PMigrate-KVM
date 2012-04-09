@@ -362,6 +362,8 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
             //hit the iteration end
             if (!block) {
                 DPRINTF("Hit memory iteration end\n");
+		//check for no live
+		sleep(100);
                 break;
             }
         }
@@ -477,7 +479,8 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
 
 static inline void *host_from_stream_offset(QEMUFile *f,
                                             ram_addr_t offset,
-                                            int flags)
+                                            int flags,
+					    uint32_t **vnum_addr)
 {
     static __thread RAMBlock *block = NULL;
     //static RAMBlock *block = NULL;
@@ -490,6 +493,7 @@ static inline void *host_from_stream_offset(QEMUFile *f,
             return NULL;
         }
 
+	*vnum_addr = block->offset + offset;
         return block->host + offset;
     }
 
@@ -499,7 +503,9 @@ static inline void *host_from_stream_offset(QEMUFile *f,
 
     QLIST_FOREACH(block, &ram_list.blocks, next) {
         if (!strncmp(id, block->idstr, sizeof(id))) {
-            //DPRINTF("block host %p, block length %lx, %lx\n", block->host, block->length, offset);
+            DPRINTF("block host %p, block length %lx, %lx\n", block->host, block->length, 
+		    block->offset + offset);
+	    *vnum_addr = block->offset + offset;
             return block->host + offset;
         }
     }
@@ -603,14 +609,13 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             if (version_id == 3)
                 host = qemu_get_ram_ptr(addr);
             else
-                host = host_from_stream_offset(f, addr, flags);
+	        host = host_from_stream_offset(f, addr, flags, &vnum_p);
             if (!host) {
                 return -EINVAL;
             }
 
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
                 fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
-            vnum_p = &(se->version_queue[addr / TARGET_PAGE_SIZE]);
 
         re_check_press:
             curr_vnum = *vnum_p;
@@ -670,11 +675,10 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             if (version_id == 3)
                 host = qemu_get_ram_ptr(addr);
             else
-                host = host_from_stream_offset(f, addr, flags);
+	        host = host_from_stream_offset(f, addr, flags, vnum_p);
 
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
                 fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
-            vnum_p = &(se->version_queue[addr/TARGET_PAGE_SIZE]);
 
         re_check_nor:
             curr_vnum = *vnum_p;
