@@ -237,7 +237,6 @@ start_host_slave(void *data) {
                 break;
             }
 
-            DPRINTF("No task left\n");
             //get nothing, wait for a moment
             nanosleep(&slave_sleep, NULL);
         }

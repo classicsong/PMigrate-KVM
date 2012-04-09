@@ -1508,7 +1508,6 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
     FdMigrationState *s = (FdMigrationState *)opaque;
     SaveStateEntry *se;
     int ret;
-    struct timespec slave_sleep = {30, 0};
 
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
         if(se->set_params == NULL) {
@@ -1526,8 +1525,6 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
      * negotiate parallel migration
      * create slaves
      */
-    DPRINTF("check for nonresponse before negotiate\n");
-    nanosleep(&slave_sleep, NULL);
     ret = qemu_savevm_state_negotiate(s, s->file);
     if (ret < 0) {
         fprintf(stderr, "Negotiate failed, %d\n", ret);
@@ -1549,8 +1546,6 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
 
     pthread_barrier_init(&s->last_barr, NULL, 3);
     s->laster_iter = 0;
-    DPRINTF("check for nonresponse before init slaves\n");
-    nanosleep(&slave_sleep, NULL);
     /*
      * initiate slave threads
      */

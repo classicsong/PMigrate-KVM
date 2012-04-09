@@ -205,7 +205,6 @@ host_memory_master(void *data) {
     pthread_barrier_wait(&s->last_barr);
     ram_save_iter(QEMU_VM_SECTION_END, s->mem_task_queue, s->file);
 
-
     //wait for slave end
     s->sender_barr->mem_state = BARR_STATE_ITER_TERMINATE;
     pthread_barrier_wait(&s->sender_barr->sender_iter_barr);

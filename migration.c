@@ -378,6 +378,8 @@ ssize_t migrate_fd_put_buffer(void *opaque, const void *data, size_t size)
 
 void migrate_fd_put(void *opaque);
 
+static pthread_t root_master;
+
 void migrate_fd_connect(FdMigrationState *s)
 {
     int ret;
@@ -407,7 +409,7 @@ void migrate_fd_connect(FdMigrationState *s)
      * The main process has to wait for last interation in migrate_fd_put first
      */
     //migrate_fd_put_ready(s);
-    migrate_fd_put(s);
+    pthread_create(&root_master, NULL, migrate_fd_put, s);
 }
 
 extern int qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f);
