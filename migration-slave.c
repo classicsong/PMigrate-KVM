@@ -120,6 +120,7 @@ start_host_slave(void *data) {
     struct sockaddr_in addr;
     int i, ret;
     QEMUFile *f;
+    struct timespec slave_sleep = {0, 1000000};
 
     if (parse_host_port(&addr, s->dest_ip) < 0) {
         fprintf(stderr, "wrong dest ip %s\n", s->dest_ip);
@@ -148,7 +149,7 @@ start_host_slave(void *data) {
                 return NULL;
             }
 
-            usleep(1000);
+            nanosleep(&slave_sleep, NULL);
             continue;
         }
 
@@ -238,7 +239,7 @@ start_host_slave(void *data) {
 
             DPRINTF("No task left\n");
             //get nothing, wait for a moment
-            usleep(SLEEP_SHORT_TIME);
+            nanosleep(&slave_sleep, NULL);
         }
     }
 
