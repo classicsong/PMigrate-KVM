@@ -198,7 +198,7 @@ BlockDriverAIOCB *laio_submit(BlockDriverState *bs, void *aio_ctx, int fd,
     struct iocb *iocbs;
     off_t offset = sector_num * 512;
 
-    fprintf("using aio\n");
+    fprintf(stderr, "using aio\n");
     laiocb = qemu_aio_get(&laio_pool, bs, cb, opaque);
     if (!laiocb)
         return NULL;
