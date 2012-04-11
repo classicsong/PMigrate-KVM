@@ -890,7 +890,7 @@ disk_save_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFile *f)
 
             if (flush_batch == DEFAULT_DISK_BATCH_LEN) {
                 //qemu_aio_flush();
-                DPRINTF("mig_iter_save %d\n", mig_save_device_iter_sync(mon, f, 0, task_q);
+                DPRINTF("mig_iter_save %d\n", mig_save_device_iter_sync(mon, f, 0, task_q));
                 data_sent += flush_blks_master(task_q, f, 0);
                 DPRINTF("mig_save 0\n"); 
                 flush_batch = 0;
