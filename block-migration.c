@@ -890,9 +890,9 @@ disk_save_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFile *f)
 
             if (flush_batch == DEFAULT_DISK_BATCH_LEN) {
                 //qemu_aio_flush();
-                //data_sent += flush_blks_master(task_q, f, 0);
+                DPRINTF("mig_iter_save %d\n", mig_save_device_iter_sync(mon, f, 0, task_q);
+                data_sent += flush_blks_master(task_q, f, 0);
                 DPRINTF("mig_save 0\n"); 
-                data_sent += mig_save_device_iter_sync(mon, f, 0, task_q);
                 flush_batch = 0;
             }
 
@@ -905,18 +905,18 @@ disk_save_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFile *f)
         while (blk_mig_save_dirty_block(mon, f, 1) != 0) {
         
             if (flush_batch == DEFAULT_DISK_BATCH_LEN) {
-//                data_sent += flush_blks_master(task_q, f, 0);
+                data_sent += flush_blks_master(task_q, f, 0);
                 DPRINTF("mig_save 1\n");
-                data_sent += mig_save_device_iter_sync(mon, f, 0, task_q);
+                //data_sent += mig_save_device_iter_sync(mon, f, 0, task_q);
                 flush_batch = 0;
             }
             flush_batch ++;
         }
 
     do {
-        DPRINTF("mig_save 2\n");
-        sent_last = mig_save_device_iter_sync(mon, f, 0, task_q);
-//        sent_last = flush_blks_master(task_q, f, 1);
+        DPRINTF("mig_save 2\n");                
+//       sent_last = mig_save_device_iter_sync(mon, f, 0, task_q);
+        sent_last = flush_blks_master(task_q, f, 1);
         data_sent += sent_last;
     } while (sent_last != 0);
 
