@@ -800,6 +800,75 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
     return data_sent;
 }
 
+//sheepx86
+static int
+mig_save_device_iter_sync(Monitor *mon, QEMUFile *f,
+                          BlkMigDevState *bmds, struct migration_task_queue *task_q) {
+    BlkMigBlock *blk;
+    int64_t total_sectors = bmds->total_sectors;
+    int64_t sector;
+    int nr_sectors;
+    unsigned long data_sent = 0;
+    struct task_body *body;
+
+    monitor_printf(mon, "disk iteration %d\n", task_q->iter_num);
+    data_sent += flush_blks_master(task_q, f, 0);
+
+    body = (struct task_body *)malloc(sizeof(struct task_body));
+    body->type = TASK_TYPE_DISK;
+    body->len = 0;
+    body->iter_num = task_q->iter_num;
+
+   DPRINTF("sync iteration %d\n", task_q->iter_num);
+  for (sector = bmds->cur_dirty; sector < bmds->total_sectors;) {
+     if (bmds_aio_inflight(bmds, sector)) {
+         qemu_aio_flush();
+     }
+     if (bdrv_get_dirty(bmds->bs, sector)) {
+
+        if (total_sectors - sector < BDRV_SECTORS_PER_DIRTY_CHUNK) {
+            nr_sectors = total_sectors - sector;
+        } else {
+            nr_sectors = BDRV_SECTORS_PER_DIRTY_CHUNK;
+        }
+        blk = qemu_malloc(sizeof(BlkMigBlock));
+        blk->buf = qemu_malloc(BLOCK_SIZE);
+        blk->bmds = bmds;
+        blk->sector = sector;
+        blk->nr_sectors = nr_sectors;
+        blk->done = 0;
+                                                                                                                                            
+        if (bdrv_read(bmds->bs, sector, blk->buf,
+                      nr_sectors) < 0) {
+            fprintf(stderr, "Error reading block device");
+            return -1;
+        }
+        body->blocks[body->len++].ptr = blk;
+
+        bdrv_reset_dirty(bmds->bs, sector, nr_sectors);
+        data_sent += BLOCK_SIZE;
+
+        if (body->len == DEFAULT_DISK_BATCH_LEN) {
+            if (queue_push_task(task_q, body) < 0)
+                fprintf(stderr, "Enqueue task error\n");
+
+            body = (struct task_body *)malloc(sizeof(struct task_body));
+            body->type = TASK_TYPE_DISK;
+            body->len = 0;
+            body->iter_num = task_q->iter_num;
+        }
+     }
+
+     sector += BDRV_SECTORS_PER_DIRTY_CHUNK;
+     bmds->cur_dirty = sector;
+  }
+
+  if (queue_push_task(task_q, body) < 0)
+      fprintf(stderr, "Enqueue task error\n");
+
+  return data_sent;
+}
+
 static unsigned long
 disk_save_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFile *f) {
     unsigned long data_sent = 0;
@@ -818,9 +887,9 @@ disk_save_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFile *f)
             }
 
             if (flush_batch == DEFAULT_DISK_BATCH_LEN) {
-//                qemu_aio_flush();
-//                data_sent += flush_blks_master(task_q, f, 0);
-                  data_sent += mig_save_device_dirty_sync(mon, f, 0, task_q);
+                qemu_aio_flush();
+                //data_sent += flush_blks_master(task_q, f, 0);
+                data_sent += mig_save_device_iter_sync(mon, f, 0, task_q);
                 flush_batch = 0;
             }
 
@@ -833,21 +902,19 @@ disk_save_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFile *f)
         while (blk_mig_save_dirty_block(mon, f, 1) != 0) {
         
             if (flush_batch == DEFAULT_DISK_BATCH_LEN) {
-                //data_sent += flush_blks_master(task_q, f, 0);
-                data_sent += mig_save_device_dirty_sync(mon, f, 0, task_q);
+//                data_sent += flush_blks_master(task_q, f, 0);
+                data_sent += mig_save_device_iter_sync(mon, f, 0, task_q);
                 flush_batch = 0;
             }
-
             flush_batch ++;
         }
 
-        data_sent += mig_save_device_dirty_sync(mon, f, 0, task_q);
-
-/*  do {
-        sent_last = flush_blks_master(task_q, f, 1);
+    do {
+        sent_last = mig_save_device_iter_sync(mon, f, 0, task_q);
+//        sent_last = flush_blks_master(task_q, f, 1);
         data_sent += sent_last;
     } while (sent_last != 0);
-*/
+
     return data_sent;
 }
 
