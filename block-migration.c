@@ -76,6 +76,7 @@ typedef struct BlkMigBlock {
     int ret;
     int64_t time;
     QSIMPLEQ_ENTRY(BlkMigBlock) entry;
+    int done; //sheepx86: non-used variable
 } BlkMigBlock;
 
 typedef struct BlkMigState {
