@@ -1580,6 +1580,7 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
     }
 
     if (qemu_file_has_error(f)) {
+        DPRINTF("error qemu_file\n");
         qemu_savevm_state_cancel(mon, f);
         return -EIO;
     }

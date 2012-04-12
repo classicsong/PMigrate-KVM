@@ -408,6 +408,7 @@ void migrate_fd_connect(FdMigrationState *s)
      */
     //migrate_fd_put_ready(s);
     DPRINTF("main thread id %lx\n", pthread_self());
+    qemu_fflush(s->file);
     pthread_create(&root_master, NULL, migrate_fd_put, s);
 }
 
@@ -418,14 +419,7 @@ migrate_fd_put(void *opaque) {
     FdMigrationState *s = opaque;
     int old_vm_running = vm_running;
     int state;
-    sigset_t set;
     struct timespec slave_sleep = {10, 1000000};
-
-    sigemptyset(&set);
-    sigaddset(&set, SIGUSR2);
-    sigaddset(&set, SIGIO);
-    sigaddset(&set, SIGALRM);
-    sigprocmask(SIG_BLOCK, &set, NULL);
 
     if (s->state != MIG_STATE_ACTIVE) {
         DPRINTF("put_ready returning because of non-active state\n");
@@ -449,8 +443,6 @@ migrate_fd_put(void *opaque) {
      */
     pthread_barrier_wait(&s->last_barr);
     qemu_fflush(s->file);
-    DPRINTF("before End of ALL\n");
-    nanosleep(&slave_sleep, NULL);
     if (qemu_savevm_nolive_state(s->mon, s->file) < 0) {
         DPRINTF("Migrate VM error in nolive state\n");
         if (old_vm_running) {
