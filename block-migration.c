@@ -128,7 +128,7 @@ disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f) {
     int len;
     BlkMigBlock *blk = (BlkMigBlock *)ptr;
 
-    DPRINTF("put disk data\n");
+    DPRINTF("put disk data, %lx\n", blk->sector);
     /* sector number and flags 
      * and iter number (classicsong)
      */
@@ -430,7 +430,7 @@ static int blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
     int progress;
     unsigned long data_sent = 0;
     struct task_body *body;
-    struct timespec sleep = {0, 100000000};
+    struct timespec sleep = {0, 1000000000};
 
     monitor_printf(mon, "disk bulk, transfer all disk data\n");
 
@@ -495,10 +495,10 @@ static int blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
                     body->len = 0;
                     body->iter_num = task_q->iter_num;
                 }
-            }
 
-            sector += BDRV_SECTORS_PER_DIRTY_CHUNK;
-            bmds->cur_dirty = sector;
+                sector += BDRV_SECTORS_PER_DIRTY_CHUNK;
+                bmds->cur_dirty = sector;
+            }
         }
 
         bmds->bulk_completed = 1;
@@ -1135,7 +1135,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
          */
         iter_num = (flags & DISK_VNUM_MASK) >> DISK_VNUM_OFFSET;
 	
-        DPRINTF("handling iter %d, flags %x\n", iter_num, flags);
+        DPRINTF("handling iter %d, flags %x:%lx\n", iter_num, flags, addr);
         /*
          * only BLK_MIG_FLAG_DEVICE_BLOCK to transfer data
          */

@@ -1921,7 +1921,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers) {
                 goto out;
             }
 
-            //DPRINTF("slave handle task %d\n", section_id);
+            DPRINTF("slave handle task %d\n", section_id);
             /*
              * ram use ram_load
              * disk use block_load
