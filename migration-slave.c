@@ -191,8 +191,8 @@ start_host_slave(void *data) {
     while (1) {
         /* check for disk */
         if (queue_pop_task(s->disk_task_queue, &body) > 0) {
-            DPRINTF("get disk task, %d, section id %d\n", s->mem_task_queue->iter_num,
-                    s->mem_task_queue->section_id);
+            //DPRINTF("get disk task, %d, section id %d\n", s->mem_task_queue->iter_num,
+            //        s->mem_task_queue->section_id);
 
             /* Section type */
             qemu_put_byte(f, QEMU_VM_SECTION_PART);
@@ -374,7 +374,7 @@ void *start_dest_slave(void *data) {
     slave_process_incoming_migration(f, para->handlers);
 
     pthread_barrier_wait(para->end_barrier);    
-    DPRINTF("Dest slave end");
+    DPRINTF("Dest slave end\n");
     //slave_loadvm_state();
 
  err2:

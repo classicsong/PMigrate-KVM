@@ -1675,8 +1675,8 @@ qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f) {
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
         int len;
 
-	if (se->save_state == NULL && se->vmsd == NULL)
-	    continue;
+        if (se->save_state == NULL && se->vmsd == NULL)
+            continue;
 
         /* Section type */
         qemu_put_byte(f, QEMU_VM_SECTION_FULL);

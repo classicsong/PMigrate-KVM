@@ -419,6 +419,7 @@ migrate_fd_put(void *opaque) {
     int old_vm_running = vm_running;
     int state;
     sigset_t set;
+    struct timespec slave_sleep = {5, 1000000};
 
     sigemptyset(&set);
     sigaddset(&set, SIGUSR2);
@@ -447,6 +448,7 @@ migrate_fd_put(void *opaque) {
      * wait for last iteration of memory and disk
      */
     pthread_barrier_wait(&s->last_barr);
+    nanosleep(&slave_sleep, NULL);
     DPRINTF("before End of ALL\n");
     if (qemu_savevm_nolive_state(s->mon, s->file) < 0) {
         if (old_vm_running) {
