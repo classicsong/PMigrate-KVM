@@ -1694,7 +1694,7 @@ qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f) {
         vmstate_save(f, se);
     }
 
-    fflush(f);
+    qemu_fflush(f);
     DPRINTF("qemu_savevm_nolive_state end\n");
     nanosleep(&slave_sleep, NULL);
     qemu_put_byte(f, QEMU_VM_EOF);
