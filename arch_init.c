@@ -286,7 +286,7 @@ ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
         }
         qemu_put_byte(f, *p);
     } else {
-        qemu_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | RAM_SAVE_FLAG_PAGE);
+        qemu_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | RAM_SAVE_FLAG_PAGE | (mem_vnum << MEM_VNUM_OFFSET));
         if (block) {
             qemu_put_byte(f, strlen(block->idstr));
             qemu_put_buffer(f, (uint8_t *)block->idstr,
@@ -532,6 +532,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
     do {
         addr = qemu_get_be64(f);
 
+	DPRINTF("addr is %lx\n", addr);
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 
