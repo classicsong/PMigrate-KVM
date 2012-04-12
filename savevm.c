@@ -1589,6 +1589,7 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
         return -EIO;
     }
 
+    DPRINTF("before enter migrate_fd_put %d\n", s->file->buf_index);
     return 0;
 }
 
@@ -1932,7 +1933,6 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers) {
                 goto out;
             }
 
-            DPRINTF("slave handle task %d\n", section_id);
             /*
              * ram use ram_load
              * disk use block_load
@@ -2106,6 +2106,22 @@ int qemu_loadvm_state(QEMUFile *f)
 
     DPRINTF("Hit End Barrier Master %d\n", section_type);
     pthread_barrier_wait(&end_barrier);
+    section_type = qemu_get_byte(f);
+    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
+    section_type = qemu_get_byte(f);
+    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
+    section_type = qemu_get_byte(f);
+    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
+    section_type = qemu_get_byte(f);
+    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
+    section_type = qemu_get_byte(f);
+    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
+    section_type = qemu_get_byte(f);
+    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
+    section_type = qemu_get_byte(f);
+    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
+    section_type = qemu_get_byte(f);
+    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
     section_type = qemu_get_byte(f);
     DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
 

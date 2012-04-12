@@ -374,13 +374,14 @@ ssize_t migrate_fd_put_buffer(void *opaque, const void *data, size_t size)
     return ret;
 }
 
-void migrate_fd_put(void *opaque);
+void * migrate_fd_put(void *opaque);
 
 static pthread_t root_master;
 
 void migrate_fd_connect(FdMigrationState *s)
 {
     int ret;
+    struct timespec slave_sleep = {10, 1000000};
 
     s->file = qemu_fopen_ops_buffered(s,
                                       s->bandwidth_limit,
@@ -407,12 +408,15 @@ void migrate_fd_connect(FdMigrationState *s)
      * The main process has to wait for last interation in migrate_fd_put first
      */
     //migrate_fd_put_ready(s);
+    qemu_fflush(s->file);
+    nanosleep(&slave_sleep, NULL);
+    DPRINTF("before enter migrate_fd_put now\n");
     pthread_create(&root_master, NULL, migrate_fd_put, s);
 }
 
 extern int qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f);
 
-void 
+void *
 migrate_fd_put(void *opaque) {
     FdMigrationState *s = opaque;
     int old_vm_running = vm_running;
@@ -421,7 +425,7 @@ migrate_fd_put(void *opaque) {
 
     if (s->state != MIG_STATE_ACTIVE) {
         DPRINTF("put_ready returning because of non-active state\n");
-        return;
+        return NULL;
     }
 
     pthread_barrier_wait(&s->last_barr);
@@ -457,6 +461,8 @@ migrate_fd_put(void *opaque) {
     }
     s->state = state;
     notifier_list_notify(&migration_state_notifiers);
+
+    return NULL;
 }
 
 void migrate_fd_put_ready(void *opaque)
