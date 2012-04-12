@@ -419,7 +419,7 @@ migrate_fd_put(void *opaque) {
     int old_vm_running = vm_running;
     int state;
     sigset_t set;
-    struct timespec slave_sleep = {5, 1000000};
+    struct timespec slave_sleep = {10, 1000000};
 
     sigemptyset(&set);
     sigaddset(&set, SIGUSR2);
@@ -451,6 +451,7 @@ migrate_fd_put(void *opaque) {
     nanosleep(&slave_sleep, NULL);
     DPRINTF("before End of ALL\n");
     if (qemu_savevm_nolive_state(s->mon, s->file) < 0) {
+        DPRINTF("Migrate VM error in nolive state\n");
         if (old_vm_running) {
             vm_start();
         }

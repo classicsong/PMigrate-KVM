@@ -2103,6 +2103,7 @@ int qemu_loadvm_state(QEMUFile *f)
 
 out:
     QLIST_FOREACH_SAFE(le, &loadvm_handlers, entry, new_le) {
+        DPRINTF("remove le %d\n", le->section_id);
         QLIST_REMOVE(le, entry);
         qemu_free(le);
     }
