@@ -350,7 +350,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
                 last_block = NULL;
                 body_len = 0;
 
-                DPRINTF("put task %lx\n", body->pages[0].addr);
+                //DPRINTF("put task %lx\n", body->pages[0].addr);
                 if (queue_push_task(task_queue, body) < 0)
                     fprintf(stderr, "Enqueue task error\n");
             }
@@ -532,13 +532,12 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
     do {
         addr = qemu_get_be64(f);
 
-	DPRINTF("addr is %lx\n", addr);
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 
         //DPRINTF("se is %p, flags %x\n", se, flags);
         //DPRINTF("se version queue is %p\n", se->version_queue);
-        DPRINTF("addr is %lx:%lx, flags %x\n", addr, addr / TARGET_PAGE_SIZE, flags);
+        //DPRINTF("addr is %lx:%lx, flags %x\n", addr, addr / TARGET_PAGE_SIZE, flags);
         if (flags & RAM_SAVE_FLAG_MEM_SIZE) {
             /*
              * classicsong add version queue for memory
