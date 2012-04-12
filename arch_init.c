@@ -335,8 +335,8 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
                 body->iter_num = task_queue->iter_num;
             }
 
-            if ((offset & TARGET_PAGE_MASK) != 0) 
-                fprintf(stderr, "error offset %lx, %p", offset, p);
+            if ((offset & 0xfff) != 0) 
+                fprintf(stderr, "error offset %lx, %p\n", offset, p);
 
             body->pages[body_len].ptr = p;
             body->pages[body_len].block = (cont == 0 ? block : NULL);

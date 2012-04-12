@@ -418,8 +418,8 @@ static void init_blk_migration(Monitor *mon, QEMUFile *f)
     bdrv_iterate(init_blk_migration_it, &tmp);
 }
 
-static int blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f, 
-                                          struct migration_task_queue *task_q)
+static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f, 
+                                                    struct migration_task_queue *task_q)
 {
     int64_t completed_sector_sum = 0;
     int64_t total_sectors;
