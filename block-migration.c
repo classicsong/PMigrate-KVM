@@ -430,6 +430,7 @@ static int blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
     int progress;
     unsigned long data_sent = 0;
     struct task_body *body;
+    struct timespec sleep = {0, 100000000};
 
     monitor_printf(mon, "disk bulk, transfer all disk data\n");
 
@@ -479,6 +480,12 @@ static int blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
                 data_sent += BLOCK_SIZE;
 
                 if (body->len == DEFAULT_DISK_BATCH_LEN) {
+                    while (task_q->task_pending > MAX_TASK_PENDING) {
+                        DPRINTF("too many disk jobs, sleep for a while");
+                        nanosleep(&sleep, NULL);
+                    }
+                        
+
                     if (queue_push_task(task_q, body) < 0)
                         fprintf(stderr, "Enqueue task error\n");
 

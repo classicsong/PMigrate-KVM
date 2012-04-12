@@ -17,6 +17,9 @@
 #define DEFAULT_MEM_BATCH_SIZE 2 * 1024 * 1024 //2M
 #define DEFAULT_DISK_BATCH_SIZE 8 * 1024 * 1024 //8M
 
+#define MAX_DATA_BUF 512 * 1024 * 1024 //512M
+#define MAX_TASK_PENDING (MAX_DATA_BUF / DEFAULT_MEM_BATCH_SIZE)
+
 #define TARGET_PAGE_BITS 12
 #define TARGET_PAGE_SIZE (1 << TARGET_PAGE_BITS)
 
@@ -98,6 +101,7 @@ struct migration_task_queue {
     unsigned long data_remaining;
     unsigned long sent_this_iter;
     unsigned long sent_last_iter;
+    volatile int task_pending;
     double bwidth;
 };
 
@@ -127,6 +131,7 @@ static struct migration_task_queue * new_task_queue(void) {
     task_queue->bwidth = 0;
     task_queue->sent_this_iter = 0;
     task_queue->sent_last_iter = 0;
+    task_queue->task_pending = 0;
 
     return task_queue;
 }
@@ -140,7 +145,8 @@ static int queue_pop_task(struct migration_task_queue *task_queue, struct task_b
         struct migration_task *task;
         task = (struct migration_task *)task_queue->list_head.next;
         __list_del(task->list.prev, task->list.next);
-        
+
+        task_queue->task_pending --;
         *arg = task->body;
         free(task);
     }    
@@ -160,6 +166,7 @@ static int queue_push_task(struct migration_task_queue *task_queue, struct task_
     pthread_mutex_lock(&(task_queue->task_lock));
     task->body = body;
     list_add_tail(&task->list, &task_queue->list_head);
+    task_queue->task_pending ++;
 
     pthread_mutex_unlock(&(task_queue->task_lock));
 
