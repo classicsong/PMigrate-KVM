@@ -373,6 +373,7 @@ void *start_dest_slave(void *data) {
      */
     slave_process_incoming_migration(f, para->handlers);
 
+    DPRINTF("Dest slave wait to end\n");
     pthread_barrier_wait(para->end_barrier);    
     DPRINTF("Dest slave end\n");
     //slave_loadvm_state();
