@@ -332,13 +332,16 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
             if (body_len == 0) {
                 body = (struct task_body *)malloc(sizeof(struct task_body));
                 body->type = TASK_TYPE_MEM;
+                body->iter_num = task_queue->iter_num;
             }
+
+            if ((offset & TARGET_PAGE_MASK) != 0) 
+                fprintf(stderr, "error offset %lx, %p", offset, p);
 
             body->pages[body_len].ptr = p;
             body->pages[body_len].block = (cont == 0 ? block : NULL);
             body->pages[body_len].addr = offset;
             body_len ++;
-            body->iter_num = task_queue->iter_num;
 
             if (body_len == DEFAULT_MEM_BATCH_LEN) {
                 body->len = body_len;

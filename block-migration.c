@@ -128,7 +128,7 @@ disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f) {
     int len;
     BlkMigBlock *blk = (BlkMigBlock *)ptr;
 
-    DPRINTF("put disk data, %lx\n", blk->sector);
+    //DPRINTF("put disk data, %lx\n", blk->sector);
     /* sector number and flags 
      * and iter number (classicsong)
      */
@@ -481,8 +481,6 @@ static int blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
 
                 if (body->len == DEFAULT_DISK_BATCH_LEN) {
                     while (task_q->task_pending > MAX_TASK_PENDING) {
-                        DPRINTF("too many disk jobs, sleep for a while %d, %d\n", 
-                                task_q->task_pending, MAX_TASK_PENDING);
                         nanosleep(&sleep, NULL);
                     }
                         
@@ -524,6 +522,8 @@ static int blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
     }
 
     block_mig_state.bulk_completed = 1;
+
+    DPRINTF("Send disk data %lx\n", data_sent);
 
     return data_sent;
 }

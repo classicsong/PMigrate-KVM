@@ -212,7 +212,7 @@ start_host_slave(void *data) {
         }
         /* check for memory */
         else if (queue_pop_task(s->mem_task_queue, &body) > 0) {
-            DPRINTF("get mem task, %lx, %d, section id %d\n", body->pages[0].addr, 
+            DPRINTF("get mem task, %lx: %p, %d, section id %d\n", body->pages[0].addr, 
                     s->mem_task_queue->iter_num, s->mem_task_queue->section_id);
             /* Section type */
             qemu_put_byte(f, QEMU_VM_SECTION_PART);
