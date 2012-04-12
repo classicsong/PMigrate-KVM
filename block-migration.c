@@ -481,7 +481,8 @@ static int blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
 
                 if (body->len == DEFAULT_DISK_BATCH_LEN) {
                     while (task_q->task_pending > MAX_TASK_PENDING) {
-                        DPRINTF("too many disk jobs, sleep for a while %d\n", task_q->task_pending);
+                        DPRINTF("too many disk jobs, sleep for a while %d, %d\n", 
+                                task_q->task_pending, MAX_TASK_PENDING);
                         nanosleep(&sleep, NULL);
                     }
                         
