@@ -448,7 +448,7 @@ migrate_fd_put(void *opaque) {
      * wait for last iteration of memory and disk
      */
     pthread_barrier_wait(&s->last_barr);
-    nanosleep(&slave_sleep, NULL);
+    qemu_fflush(s->file);
     DPRINTF("before End of ALL\n");
     nanosleep(&slave_sleep, NULL);
     if (qemu_savevm_nolive_state(s->mon, s->file) < 0) {

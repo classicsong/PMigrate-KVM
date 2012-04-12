@@ -1579,8 +1579,6 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
         */
     }
 
-    qemu_fflush(f);
-
     if (qemu_file_has_error(f)) {
         qemu_savevm_state_cancel(mon, f);
         return -EIO;
@@ -1675,6 +1673,7 @@ qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f) {
     struct timespec slave_sleep = {10, 1000000};
 
     DPRINTF("qemu_savevm_nolive_state\n");
+    qemu_fflush(f);
     nanosleep(&slave_sleep, NULL);
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
         int len;
