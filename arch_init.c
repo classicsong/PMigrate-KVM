@@ -646,7 +646,8 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
              */
             if (curr_vnum > mem_vnum * 2) {
                 ch = qemu_get_byte(f);
-                continue;
+                DPRINTF("skip page patch %d, %d\n", curr_vnum, mem_vnum*2);
+                goto end;
             }
 
             /*
@@ -714,7 +715,8 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 /* the memory data is sent at host end so we must receive it */
                 uint8_t buf[TARGET_PAGE_SIZE];
                 qemu_get_buffer(f, buf, TARGET_PAGE_SIZE);
-                continue;
+                DPRINTF("skip page patch %d, %d\n", curr_vnum, mem_vnum * 2);
+                goto end;
             }
 
             /*
@@ -732,6 +734,8 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
              */
             release_page(vnum_p, mem_vnum);
         }
+
+    end:
         if (qemu_file_has_error(f)) {
             return -EIO;
         }
