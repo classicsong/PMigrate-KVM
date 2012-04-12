@@ -344,7 +344,7 @@ host_disk_master(void * data) {
             pthread_mutex_unlock(&s->sender_barr->master_lock);
         }
         else {
-            int total_expected_downtime;
+            uint64_t total_expected_downtime;
             uint64_t sent_this_iter;
             uint64_t sent_last_iter;
             /*
@@ -362,7 +362,8 @@ host_disk_master(void * data) {
                     s->mem_task_queue->data_remaining + s->disk_task_queue->data_remaining, 
                     s->mem_task_queue->bwidth + s->disk_task_queue->bwidth);
 
-            DPRINTF("Sent this iter %ld, sent last iter %ld\n", sent_this_iter, sent_last_iter);
+            DPRINTF("Sent this iter %ld, sent last iter %ld, expect downtime %ld ns\n", 
+                    sent_this_iter, sent_last_iter, total_expected_downtime);
 
             if (total_expected_downtime < s->para_config->max_downtime ||
                 sent_this_iter > sent_last_iter ||

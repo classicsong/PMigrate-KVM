@@ -497,6 +497,14 @@ static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
                 sector += BDRV_SECTORS_PER_DIRTY_CHUNK;
                 bmds->cur_dirty = sector;
             }
+
+            if (body->len != 0) {
+                DPRINTF("additional disk task %d\n", body->len);
+                if (queue_push_task(task_q, body) < 0)
+                    fprintf(stderr, "Enqueue task error\n");
+            } else {
+                free(body);
+            }
         }
 
         bmds->bulk_completed = 1;
@@ -905,9 +913,13 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
         bmds->cur_dirty = sector;
     }
 
-    if (queue_push_task(task_q, body) < 0)
-        fprintf(stderr, "Enqueue task error\n");
-
+    if (body->len != 0) {
+        DPRINTF("additional disk task %d\n", body->len);
+        if (queue_push_task(task_q, body) < 0)
+            fprintf(stderr, "Enqueue task error\n");
+    } else
+        free(body);
+            
     return data_sent;
 }
 

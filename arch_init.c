@@ -350,6 +350,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
                 last_block = NULL;
                 body_len = 0;
 
+                DPRINTF("put task %lx\n", body->pages[0].addr);
                 if (queue_push_task(task_queue, body) < 0)
                     fprintf(stderr, "Enqueue task error\n");
             }
@@ -378,6 +379,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
     if (body_len > 0) {
         body->len = body_len;
 
+        DPRINTF("put task %lx\n", body->pages[0].addr);
         if (queue_push_task(task_queue, body) < 0)
             fprintf(stderr, "Enqueue task error\n");
     }
@@ -396,7 +398,7 @@ ram_save_iter(int stage, struct migration_task_queue *task_queue, QEMUFile *f) {
     if (stage == 3) {
         /* flush all remaining blocks regardless of rate limiting */ 
         bytes_transferred = ram_save_block_master(task_queue);
-        DPRINTF("Total memory sent last iter %ld\n", bytes_transferred);
+        DPRINTF("Total memory sent last iter %lx\n", bytes_transferred);
         cpu_physical_memory_set_dirty_tracking(0);
     } else {
         /* try transferring iterative blocks of memory */
