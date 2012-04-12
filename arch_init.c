@@ -532,7 +532,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
 
         //DPRINTF("se is %p, flags %x\n", se, flags);
         //DPRINTF("se version queue is %p\n", se->version_queue);
-        //DPRINTF("addr is %lx:%lx, flags %x\n", addr, addr / TARGET_PAGE_SIZE, flags);
+        DPRINTF("addr is %lx:%lx, flags %x\n", addr, addr / TARGET_PAGE_SIZE, flags);
         if (flags & RAM_SAVE_FLAG_MEM_SIZE) {
             /*
              * classicsong add version queue for memory
