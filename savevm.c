@@ -1579,6 +1579,8 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
         */
     }
 
+    qemu_fflush(f);
+
     if (qemu_file_has_error(f)) {
         qemu_savevm_state_cancel(mon, f);
         return -EIO;
@@ -1673,6 +1675,7 @@ qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f) {
     struct timespec slave_sleep = {10, 1000000};
 
     DPRINTF("qemu_savevm_nolive_state\n");
+    nanosleep(&slave_sleep, NULL);
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
         int len;
 
@@ -2099,7 +2102,8 @@ int qemu_loadvm_state(QEMUFile *f)
 
     DPRINTF("Hit End Barrier Master %d\n", section_type);
     pthread_barrier_wait(&end_barrier);
-    DPRINTF("Get out of qemu_loadvm_state\n");
+    section_type = qemu_get_byte(f);
+    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
 
     cpu_synchronize_all_post_init();
 
