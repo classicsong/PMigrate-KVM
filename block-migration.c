@@ -430,7 +430,7 @@ static int blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
     int progress;
     unsigned long data_sent = 0;
     struct task_body *body;
-    struct timespec sleep = {0, 1000000000};
+    struct timespec sleep = {1, 10000};
 
     monitor_printf(mon, "disk bulk, transfer all disk data\n");
 
