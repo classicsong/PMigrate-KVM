@@ -38,8 +38,8 @@
  * disk_vnum
  */
 #define DISK_VNUM_OFFSET               3
-#define DISK_VNUM_MASK                 (0x3f << DISK_VNUM_OFFSET)
-#define DISK_NEGOTIATE                 0x3f
+#define DISK_VNUM_MASK                 (0x3ff << DISK_VNUM_OFFSET)
+#define DISK_NEGOTIATE                 0x3ff
 
 
 #define DEBUG_BLK_MIGRATION
