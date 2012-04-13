@@ -38,8 +38,8 @@
  * disk_vnum
  */
 #define DISK_VNUM_OFFSET               3
-#define DISK_VNUM_MASK                 (0x3ff << DISK_VNUM_OFFSET)
-#define DISK_NEGOTIATE                 0x3ff
+#define DISK_VNUM_MASK                 (0x3f << DISK_VNUM_OFFSET)
+#define DISK_NEGOTIATE                 0x3f
 
 
 #define DEBUG_BLK_MIGRATION
@@ -1078,7 +1078,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
          */
         iter_num = (flags & DISK_VNUM_MASK) >> DISK_VNUM_OFFSET;
 	
-        //DPRINTF("handling iter %d, flags %x:%lx\n", iter_num, flags, addr);
+        DPRINTF("handling iter %d, flags %x:%lx\n", iter_num, flags, addr);
         /*
          * only BLK_MIG_FLAG_DEVICE_BLOCK to transfer data
          */
