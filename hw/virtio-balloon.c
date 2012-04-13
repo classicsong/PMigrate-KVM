@@ -122,6 +122,7 @@ static void virtio_balloon_handle_output(VirtIODevice *vdev, VirtQueue *vq)
 
             /* Using qemu_get_ram_ptr is bending the rules a bit, but
                should be OK because we only want a single page.  */
+            DPRINTF("qemu_get_ram_ptr @ balloon_page\n");
             balloon_page(qemu_get_ram_ptr(addr), !!(vq == s->dvq));
         }
 
