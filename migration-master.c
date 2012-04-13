@@ -56,6 +56,7 @@ extern uint64_t blk_read_remaining(void);
 #define QEMU_VM_SECTION_END          0x03
 #define QEMU_VM_SECTION_FULL         0x04
 #define QEMU_VM_SUBSECTION           0x05
+extern int get_buf_index(QEMUFile *f);
 
 void *
 host_memory_master(void *data) {
@@ -205,7 +206,7 @@ host_memory_master(void *data) {
         s->mem_task_queue->iter_num ++;
     } while (s->laster_iter != 1);
 
-    DPRINTF("Done mem iterating\n");
+    DPRINTF("Done mem iterating, %d\n", get_buf_index(f));
 
     pthread_barrier_wait(&s->last_barr);
 
@@ -402,7 +403,7 @@ host_disk_master(void * data) {
         s->disk_task_queue->iter_num ++;
     } while (s->laster_iter != 1);
 
-    DPRINTF("done iterating\n");
+    DPRINTF("done iterating %d\n", get_buf_index(s->file));
 
     pthread_barrier_wait(&s->last_barr);
 

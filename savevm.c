@@ -190,6 +190,10 @@ struct QEMUFile {
     int has_error;
 };
 
+int get_buf_index(QEMUFile *f) {
+    return f->buf_index;
+}
+
 typedef struct QEMUFileStdio
 {
     FILE *stdio_file;
@@ -1578,10 +1582,11 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
         if (se->save_live_state == ram_save_block)
             create_host_disk_master(s);
         */
-        DPRINTF("END handle se->section_id %d, %d\n", se->section_id, f->buf_index);
         qemu_put_be32(f, 0x123456);
-        DPRINTF("put magic %x", 0x123456);
+        DPRINTF("put magic %x\n", 0x123456);
         qemu_fflush(f);
+
+        DPRINTF("END handle se->section_id %d, %d\n", se->section_id, f->buf_index);
     }
 
     DPRINTF("At the end of savevm_state_begin\n");
