@@ -276,7 +276,7 @@ ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
     RAMBlock *block = (RAMBlock *)block_p;
     QEMUFile *f = s->file;
 
-    if(p==nil)
+    if(p==0)
         DPRINTF("put task %lx, %p\n", offset, p);
     
     if (is_dup_page(p, *p)) {
