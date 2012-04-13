@@ -1459,7 +1459,6 @@ static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id)
 {
     if (!se->vmsd) {         /* Old style */
         //classicsong change it
-        DPRINTF("old style\n");
         return se->load_state(f, se, version_id);
         //return se->load_state(f, se->opaque, version_id);
     }
@@ -1674,7 +1673,7 @@ qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f) {
     SaveStateEntry *se;
     struct timespec slave_sleep = {10, 1000000};
 
-    DPRINTF("qemu_savevm_nolive_state %d\n");
+    DPRINTF("qemu_savevm_nolive_state\n");
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
         int len;
 
@@ -1986,7 +1985,6 @@ int qemu_loadvm_state(QEMUFile *f)
         SaveStateEntry *se;
         char idstr[257];
         int len;
-        uint32_t check;
 
         //classicsong add this
         int num_slaves, num_ips, ssl_type, i;
