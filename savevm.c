@@ -2158,24 +2158,6 @@ int qemu_loadvm_state(QEMUFile *f)
 
     DPRINTF("Hit End Barrier Master %d\n", section_type);
     pthread_barrier_wait(&end_barrier);
-    section_type = qemu_get_byte(f);
-    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
-    section_type = qemu_get_byte(f);
-    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
-    section_type = qemu_get_byte(f);
-    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
-    section_type = qemu_get_byte(f);
-    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
-    section_type = qemu_get_byte(f);
-    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
-    section_type = qemu_get_byte(f);
-    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
-    section_type = qemu_get_byte(f);
-    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
-    section_type = qemu_get_byte(f);
-    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
-    section_type = qemu_get_byte(f);
-    DPRINTF("Get out of qemu_loadvm_state %d\n", section_type);
 
     cpu_synchronize_all_post_init();
 
