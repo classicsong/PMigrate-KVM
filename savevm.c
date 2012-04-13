@@ -1335,6 +1335,7 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
     VMStateField *field = vmsd->fields;
     int ret;
 
+    fprintf(stderr, "vmstate_save new style %s\n", field->name);
     if (version_id > vmsd->version_id) {
         return -EINVAL;
     }
@@ -1458,6 +1459,7 @@ static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id)
 {
     if (!se->vmsd) {         /* Old style */
         //classicsong change it
+        DPRINTF("old style\n");
         return se->load_state(f, se, version_id);
         //return se->load_state(f, se->opaque, version_id);
     }
@@ -1990,11 +1992,10 @@ int qemu_loadvm_state(QEMUFile *f)
         int num_slaves, num_ips, ssl_type, i;
         uint8_t ip_buf[32];               //32 bytes is enough for dest_ip:port
 
-        DPRINTF("section type %d\n", section_type);
+        //DPRINTF("section type %d\n", section_type);
         switch (section_type) {
         case QEMU_VM_SECTION_START:
         case QEMU_VM_SECTION_FULL:
-            DPRINTF("Start transfer data\n");
 
             /* Read section start */
             section_id = qemu_get_be32(f);
@@ -2028,7 +2029,7 @@ int qemu_loadvm_state(QEMUFile *f)
             le->version_id = version_id;
             QLIST_INSERT_HEAD(&loadvm_handlers, le, entry);
 
-            DPRINTF("get se %s:%p\n", idstr, se);
+            DPRINTF("get se %s\n", idstr);
             ret = vmstate_load(f, se, le->version_id);
             if (ret < 0) {
                 fprintf(stderr, "qemu: warning: error while loading state for instance 0x%x of device '%s'\n",
