@@ -409,8 +409,7 @@ void migrate_fd_connect(FdMigrationState *s)
      * The main process has to wait for last interation in migrate_fd_put first
      */
     //migrate_fd_put_ready(s);
-    //    pthread_create(&root_master, NULL, migrate_fd_put, s);
-    migrate_fd_put(s);
+    pthread_create(&root_master, NULL, migrate_fd_put, s);
 }
 
 extern int qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f);
@@ -440,7 +439,6 @@ migrate_fd_put(void *opaque) {
     /*
      * wait for last iteration of memory and disk
      */
-    nanosleep(&slave_sleep, NULL);
     pthread_barrier_wait(&s->last_barr);
     if (qemu_savevm_nolive_state(s->mon, s->file) < 0) {
         DPRINTF("Migrate VM error in nolive state\n");
