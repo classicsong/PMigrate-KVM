@@ -690,9 +690,10 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             unsigned long index = 0;
 
             //DPRINTF("handle normal page\n");
-            if (version_id == 3)
+            if (version_id == 3){
+                DPRINTF("calling qemu_get_ram_ptr();\n");
                 host = qemu_get_ram_ptr(addr);
-            else
+            }else
 	        host = host_from_stream_offset(f, addr, flags, &index);
 
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
