@@ -377,6 +377,7 @@ ssize_t migrate_fd_put_buffer(void *opaque, const void *data, size_t size)
 void * migrate_fd_put(void *opaque);
 
 static pthread_t root_master;
+extern void start_check(void *f);
 
 void migrate_fd_connect(FdMigrationState *s)
 {
@@ -398,7 +399,8 @@ void migrate_fd_connect(FdMigrationState *s)
         migrate_fd_error(s);
         return;
     }
-    
+
+    start_check(s->file);
     /*
      * classicsong use migrate_fd_put(s) instead of 
      * migrate_fd_put_ready

@@ -547,9 +547,21 @@ void qemu_file_put_notify(QEMUFile *f)
     f->put_buffer(f->opaque, NULL, 0, 0);
 }
 
+static int check_buf_error = 0;
+static void *check_f = NULL;
+
+void start_check(void * f) {
+    DPRINTF("start check\n");
+    check_buf_error = 1;
+    check_f = f;
+}
+
 void qemu_put_buffer(QEMUFile *f, const uint8_t *buf, int size)
 {
     int l;
+
+    if (check_buf_error == 1 && check_f == f)
+        backtrace();
 
     if (!f->has_error && f->is_write == 0 && f->buf_index > 0) {
         fprintf(stderr,
@@ -578,6 +590,12 @@ void qemu_put_byte(QEMUFile *f, int v)
                 "Attempted to write to buffer while read buffer is not empty\n");
         abort();
     }
+
+    if (check_buf_error == 1 && check_f == f)
+        backtrace();
+
+    if (check_buf_error == 1)
+        backtrace();
 
     f->buf[f->buf_index++] = v;
     f->is_write = 1;
