@@ -520,6 +520,8 @@ static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
         } else {
             progress = 100;
         }
+
+        /*
         if (progress != block_mig_state.prev_progress) {
             block_mig_state.prev_progress = progress;
             qemu_put_be64(f, (progress << BDRV_SECTOR_BITS)
@@ -527,6 +529,7 @@ static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
             monitor_printf(mon, "Completed %d %%\r", progress);
             monitor_flush(mon);
         }
+        */
     }
 
     block_mig_state.bulk_completed = 1;
