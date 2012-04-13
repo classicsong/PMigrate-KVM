@@ -30,7 +30,7 @@
 #include <sys/mman.h>
 #endif
 
-#define DEBUG_BALLOON 1
+#define DEBUG_BALLOON
 
 #ifdef DEBUG_BALLOON
 #define DPRINTF(fmt, ...) printf(fmt, ## __VA_ARGS__)
