@@ -1060,7 +1060,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
     int nr_sectors;
     int iter_num;
 
-    DPRINTF("Entering block_load\n");
+    //DPRINTF("Entering block_load\n");
     /*
      * at the initialization, the block_load will receive a BLK_MIG_FLAG_EOS
      */
@@ -1075,7 +1075,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
          */
         iter_num = (flags & DISK_VNUM_MASK) >> DISK_VNUM_OFFSET;
 	
-        DPRINTF("handling iter %d, flags %x:%lx\n", iter_num, flags, addr);
+        //DPRINTF("handling iter %d, flags %x:%lx\n", iter_num, flags, addr);
         /*
          * only BLK_MIG_FLAG_DEVICE_BLOCK to transfer data
          */

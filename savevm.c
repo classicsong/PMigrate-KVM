@@ -1579,9 +1579,10 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
             create_host_disk_master(s);
         */
         DPRINTF("END handle se->section_id %d, %d\n", se->section_id, f->buf_index);
+        qemu_put_be32(f, 0x123456);
+        qemu_fflush(s->file);
     }
 
-    qemu_fflush(s->file);
     DPRINTF("At the end of savevm_state_begin\n");
     if (qemu_file_has_error(f)) {
         DPRINTF("error qemu_file\n");
@@ -1678,7 +1679,7 @@ qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f) {
     SaveStateEntry *se;
     struct timespec slave_sleep = {10, 1000000};
 
-    DPRINTF("qemu_savevm_nolive_state\n");
+    DPRINTF("qemu_savevm_nolive_state %d\n", f->buf_index);
     qemu_fflush(f);
     nanosleep(&slave_sleep, NULL);
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
@@ -1992,6 +1993,7 @@ int qemu_loadvm_state(QEMUFile *f)
         SaveStateEntry *se;
         char idstr[257];
         int len;
+        uint32_t check;
 
         //classicsong add this
         int num_slaves, num_ips, ssl_type, i;
@@ -2042,6 +2044,9 @@ int qemu_loadvm_state(QEMUFile *f)
                         instance_id, idstr);
                 goto out;
             }
+
+            check = qemu_get_be32(f);
+            DPRINTF("get magic %lx", check);
             break;
         case QEMU_VM_SECTION_PART:
         case QEMU_VM_SECTION_END:
