@@ -345,6 +345,11 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
             body->pages[body_len].addr = offset;
             body_len ++;
 
+	if (offset == 0){
+	   DPRINTF("\t%p is nil, cur_addr=%p, host=%lx\n", p, current_addr, block->host);
+	}
+
+
             if (body_len == DEFAULT_MEM_BATCH_LEN) {
                 body->len = body_len;
 
