@@ -1459,6 +1459,7 @@ static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id)
 {
     if (!se->vmsd) {         /* Old style */
         //classicsong change it
+        DPRINTF("old style\n");
         return se->load_state(f, se, version_id);
         //return se->load_state(f, se->opaque, version_id);
     }

@@ -409,7 +409,8 @@ void migrate_fd_connect(FdMigrationState *s)
      * The main process has to wait for last interation in migrate_fd_put first
      */
     //migrate_fd_put_ready(s);
-    pthread_create(&root_master, NULL, migrate_fd_put, s);
+    //    pthread_create(&root_master, NULL, migrate_fd_put, s);
+    migrate_fd_put(s);
 }
 
 extern int qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f);

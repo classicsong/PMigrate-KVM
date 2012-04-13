@@ -379,7 +379,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
     if (body_len > 0) {
         body->len = body_len;
 
-        DPRINTF("put task %lx\n", body->pages[0].addr);
+        DPRINTF("put task %lx, %p\n", body->pages[0].addr, body->pages[0].ptr);
         if (queue_push_task(task_queue, body) < 0)
             fprintf(stderr, "Enqueue task error\n");
     }
