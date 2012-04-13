@@ -1574,16 +1574,6 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
         qemu_put_be32(f, se->version_id);
 
         se->save_live_state(mon, f, QEMU_VM_SECTION_START, s);
-
-        /* this should be done in block save live
-        if (se->save_live_state == ram_save_block)
-            create_host_disk_master(s);
-        */
-        qemu_put_be32(f, 0x123456);
-        DPRINTF("put magic %x\n", 0x123456);
-        qemu_fflush(f);
-
-        DPRINTF("END handle se->section_id %d, %d\n", se->section_id, f->buf_index);
     }
 
     DPRINTF("At the end of savevm_state_begin\n");
@@ -2045,9 +2035,6 @@ int qemu_loadvm_state(QEMUFile *f)
                         instance_id, idstr);
                 goto out;
             }
-
-            check = qemu_get_be32(f);
-            DPRINTF("get magic %x\n", check);
             break;
         case QEMU_VM_SECTION_PART:
         case QEMU_VM_SECTION_END:
