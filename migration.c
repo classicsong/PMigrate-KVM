@@ -400,7 +400,6 @@ void migrate_fd_connect(FdMigrationState *s)
         return;
     }
 
-    start_check(s->file);
     /*
      * classicsong use migrate_fd_put(s) instead of 
      * migrate_fd_put_ready
@@ -410,9 +409,6 @@ void migrate_fd_connect(FdMigrationState *s)
      * The main process has to wait for last interation in migrate_fd_put first
      */
     //migrate_fd_put_ready(s);
-    qemu_fflush(s->file);
-    nanosleep(&slave_sleep, NULL);
-    DPRINTF("before enter migrate_fd_put now\n");
     pthread_create(&root_master, NULL, migrate_fd_put, s);
 }
 

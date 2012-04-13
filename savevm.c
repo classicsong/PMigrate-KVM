@@ -191,12 +191,6 @@ struct QEMUFile {
     int has_error;
 };
 
-int get_buf_index(QEMUFile *f);
-
-int get_buf_index(QEMUFile *f) {
-    return f->buf_index;
-}
-
 typedef struct QEMUFileStdio
 {
     FILE *stdio_file;
@@ -550,32 +544,9 @@ void qemu_file_put_notify(QEMUFile *f)
     f->put_buffer(f->opaque, NULL, 0, 0);
 }
 
-static int check_buf_error = 0;
-static void *check_f = NULL;
-void start_check(void * f);
-void start_check(void * f) {
-    DPRINTF("start check\n");
-    check_buf_error = 1;
-    check_f = f;
-}
-
 void qemu_put_buffer(QEMUFile *f, const uint8_t *buf, int size)
 {
     int l;
-    char **string;
-    void *array[10];
-    size_t i;
-    size_t buf_size;
-
-    if (check_buf_error == 1 && check_f == f) {
-        buf_size = backtrace(array, 10);
-        string = backtrace_symbols(array, buf_size);
-
-        for (i = 0; i < buf_size; i++)
-            printf("%s\n", string[i]);
-
-        free(string);
-    }
 
     if (!f->has_error && f->is_write == 0 && f->buf_index > 0) {
         fprintf(stderr,
@@ -599,21 +570,6 @@ void qemu_put_buffer(QEMUFile *f, const uint8_t *buf, int size)
 
 void qemu_put_byte(QEMUFile *f, int v)
 {
-    char **string;
-    void *array[10];
-    size_t i;
-    size_t size;
-
-    if (check_buf_error == 1 && check_f == f) {
-        size = backtrace(array, 10);
-        string = backtrace_symbols(array, size);
-
-        for (i = 0; i < size; i++)
-            printf("%s\n", string[i]);
-
-        free(string);
-    }
-
     if (!f->has_error && f->is_write == 0 && f->buf_index > 0) {
         fprintf(stderr,
                 "Attempted to write to buffer while read buffer is not empty\n");
@@ -1726,9 +1682,7 @@ qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f) {
     SaveStateEntry *se;
     struct timespec slave_sleep = {10, 1000000};
 
-    DPRINTF("qemu_savevm_nolive_state %d\n", f->buf_index);
-    qemu_fflush(f);
-    nanosleep(&slave_sleep, NULL);
+    DPRINTF("qemu_savevm_nolive_state %d\n");
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
         int len;
 
@@ -2063,7 +2017,7 @@ int qemu_loadvm_state(QEMUFile *f)
             /* Find savevm section */
             se = find_se(idstr, instance_id);
             if (se == NULL) {
-                fprintf(stderr, "Unknown savevm section or instance '%s' %d\n", idstr, instance_id);
+                fprintf(stderr, "Unknown savevm section or instance '%s':%d %d\n", idstr, len, instance_id);
                 ret = -EINVAL;
                 goto out;
             }
