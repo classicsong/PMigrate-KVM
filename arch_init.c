@@ -277,7 +277,7 @@ ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
     QEMUFile *f = s->file;
 
     if(p==0)
-        DPRINTF("put task %lx, %p\n", offset, p);
+        DPRINTF("[S]put task %lx, %p\n", offset, p);
     
     if (is_dup_page(p, *p)) {
         qemu_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
@@ -358,7 +358,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
                 last_block = NULL;
                 body_len = 0;
 
-                DPRINTF("put task %lx, %p\n", body->pages[0].addr, p);
+                DPRINTF("[M]put task %lx, %p\n", body->pages[0].addr, p);
                 if (queue_push_task(task_queue, body) < 0)
                     fprintf(stderr, "Enqueue task error\n");
             }
