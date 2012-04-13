@@ -1580,7 +1580,8 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
         */
         DPRINTF("END handle se->section_id %d, %d\n", se->section_id, f->buf_index);
         qemu_put_be32(f, 0x123456);
-        qemu_fflush(s->file);
+        DPRINTF("put magic %x", 0x123456);
+        qemu_fflush(f);
     }
 
     DPRINTF("At the end of savevm_state_begin\n");
@@ -2046,7 +2047,7 @@ int qemu_loadvm_state(QEMUFile *f)
             }
 
             check = qemu_get_be32(f);
-            DPRINTF("get magic %lx", check);
+            DPRINTF("get magic %x\n", check);
             break;
         case QEMU_VM_SECTION_PART:
         case QEMU_VM_SECTION_END:

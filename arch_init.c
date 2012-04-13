@@ -543,6 +543,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
              * classicsong add version queue for memory
              * The queue length is equals to the number of pages guest VM has
              */
+            DPRINTF("init mem addr is %lx:%lx, flags %x\n", addr, addr / TARGET_PAGE_SIZE, flags);
             se->version_queue = (uint32_t *)calloc(addr / TARGET_PAGE_SIZE, sizeof(uint32_t));
             se->total_size = addr / TARGET_PAGE_SIZE;
 
@@ -740,10 +741,6 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             return -EIO;
         }
     } while (!(flags & RAM_SAVE_FLAG_EOS));
-
-    /*
-     * need barrier for iterations
-     */
 
     return 0;
 }
