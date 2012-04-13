@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <zlib.h>
+#include <execinfo.h>
 
 /* Needed early for CONFIG_BSD etc. */
 #include "config-host.h"
@@ -189,6 +190,8 @@ struct QEMUFile {
 
     int has_error;
 };
+
+int get_buf_index(QEMUFile *f);
 
 int get_buf_index(QEMUFile *f) {
     return f->buf_index;
@@ -549,7 +552,7 @@ void qemu_file_put_notify(QEMUFile *f)
 
 static int check_buf_error = 0;
 static void *check_f = NULL;
-
+void start_check(void * f);
 void start_check(void * f) {
     DPRINTF("start check\n");
     check_buf_error = 1;
@@ -559,9 +562,20 @@ void start_check(void * f) {
 void qemu_put_buffer(QEMUFile *f, const uint8_t *buf, int size)
 {
     int l;
+    char **string;
+    void *array[10];
+    size_t i;
+    size_t buf_size;
 
-    if (check_buf_error == 1 && check_f == f)
-        backtrace();
+    if (check_buf_error == 1 && check_f == f) {
+        buf_size = backtrace(array, 10);
+        string = backtrace_symbols(array, buf_size);
+
+        for (i = 0; i < buf_size; i++)
+            printf("%s\n", string[i]);
+
+        free(string);
+    }
 
     if (!f->has_error && f->is_write == 0 && f->buf_index > 0) {
         fprintf(stderr,
@@ -585,17 +599,26 @@ void qemu_put_buffer(QEMUFile *f, const uint8_t *buf, int size)
 
 void qemu_put_byte(QEMUFile *f, int v)
 {
+    char **string;
+    void *array[10];
+    size_t i;
+    size_t size;
+
+    if (check_buf_error == 1 && check_f == f) {
+        size = backtrace(array, 10);
+        string = backtrace_symbols(array, size);
+
+        for (i = 0; i < size; i++)
+            printf("%s\n", string[i]);
+
+        free(string);
+    }
+
     if (!f->has_error && f->is_write == 0 && f->buf_index > 0) {
         fprintf(stderr,
                 "Attempted to write to buffer while read buffer is not empty\n");
         abort();
     }
-
-    if (check_buf_error == 1 && check_f == f)
-        backtrace();
-
-    if (check_buf_error == 1)
-        backtrace();
 
     f->buf[f->buf_index++] = v;
     f->is_write = 1;
