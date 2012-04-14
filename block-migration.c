@@ -139,6 +139,7 @@ disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f) {
     len = strlen(blk->bmds->bs->device_name);
     qemu_put_byte(f, len);
     qemu_put_buffer(f, (uint8_t *)blk->bmds->bs->device_name, len);
+    DPRINTF("device name %s\n", blk->bmds->bs->device_name);
 
     qemu_put_buffer(f, blk->buf, BLOCK_SIZE);
 
@@ -917,14 +918,7 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
     }
 
     if (body->len != 0) {
-        DPRINTF("additional disk task %d, blktype %lx\n", body->len, body->type);
-        body->type &= ~ 1;
-        if (body->type == 0)
-            body->type = 2;//JUST debug, without using the macro definitions
-        //I don't know where initialized the block, 
         char *p = (char *) body;
-        void *pp = (void *)p[sizeof (int) * 2 + sizeof(void *) * body->len];
-        pp = NULL;
         DPRINTF("DEBUG:%s\n", (char *) body->blocks);
         if (queue_push_task(task_q, body) < 0)
             fprintf(stderr, "Enqueue task error\n");

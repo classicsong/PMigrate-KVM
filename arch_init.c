@@ -351,19 +351,13 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
             body->pages[body_len].addr = offset;
             body_len ++;
 
-	if (offset == 0){
-	   DPRINTF("\t%p is nil, cur_addr=%p, host=%lx\n", p, current_addr, block->host);
-	}
-
-
             if (body_len == DEFAULT_MEM_BATCH_LEN) {
                 body->len = body_len;
 
                 //finish one batch, for next batch, the RAM_SAVE_FLAG_CONTINUE should not be set
                 last_block = NULL;
                 body_len = 0;
-                DPRINTF("[M] len=%lx\n", body->len);
-                DPRINTF("[M]put task %lx, %p\n", body->pages[0].addr, p);
+
                 if (queue_push_task(task_queue, body) < 0)
                     fprintf(stderr, "Enqueue task error\n");
             }
@@ -392,8 +386,6 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
     if (body_len > 0) {
         body->len = body_len;
 
-        DPRINTF("put task %lx, %p\n", body->pages[0].addr, body->pages[0].ptr);
-        DPRINTF("[M] len=%lx\n", body->len);
         if (queue_push_task(task_queue, body) < 0)
             fprintf(stderr, "Enqueue task error\n");
     }
