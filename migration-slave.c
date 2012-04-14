@@ -136,7 +136,7 @@ start_host_slave(void *data) {
         return NULL;
     }
 
-    DPRINTF("Start host slave, begin creating connection\n");
+    DPRINTF("Start host slave, begin creating connection, %s\n", s->dest_ip);
     /*
      * create network connection
      */
@@ -366,6 +366,7 @@ void *start_dest_slave(void *data) {
     }
 
     DPRINTF("DEST slave connection created %s\n", para->listen_ip);
+    free(para->listen_ip);
 
     /*
      * slave handle incoming data

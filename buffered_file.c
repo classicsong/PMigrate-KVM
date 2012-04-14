@@ -215,7 +215,7 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
         }
 
         if (ret <= 0) {
-            fprintf(stderr, "error putting\n");
+            fprintf(stderr, "error putting %d\n", ret);
             s->has_error = 1;
             offset = -EINVAL;
             break;

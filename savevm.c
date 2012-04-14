@@ -1994,7 +1994,7 @@ int qemu_loadvm_state(QEMUFile *f)
 
         //classicsong add this
         int num_slaves, num_ips, ssl_type, i;
-        uint8_t ip_buf[32];               //32 bytes is enough for dest_ip:port
+        uint8_t *ip_buf;               //32 bytes is enough for dest_ip:port
 
         //DPRINTF("section type %d\n", section_type);
         switch (section_type) {
@@ -2084,6 +2084,7 @@ int qemu_loadvm_state(QEMUFile *f)
             for (i = 0; i < num_ips; i++) {
                 pthread_t tid;
                 int len = qemu_get_be32(f);
+                ip_buf = (uint8_t *)malloc(32 * sizeof(uint8_t));
 
                 qemu_get_buffer(f, ip_buf, len);
                 ip_buf[len] = 0;
