@@ -1465,7 +1465,6 @@ static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id)
             return se->load_state(f, se, version_id);
         }
         
-        DPRINTF("old style\n");
         return se->load_state(f, se->opaque, version_id);
     }
     return vmstate_load_state(f, se->vmsd, se->opaque, version_id);
@@ -2084,6 +2083,10 @@ int qemu_loadvm_state(QEMUFile *f)
             for (i = 0; i < num_ips; i++) {
                 pthread_t tid;
                 int len = qemu_get_be32(f);
+                /*
+                 * need to use heap obj
+                 * use stack obj will cause dungling pointer problem in creating slaves
+                 */
                 ip_buf = (uint8_t *)malloc(32 * sizeof(uint8_t));
 
                 qemu_get_buffer(f, ip_buf, len);
