@@ -140,17 +140,17 @@ static int ram_save_block(QEMUFile *f)
     current_addr = block->offset + offset;
 
     do {
-        DPRINTF("->cpu_physical_memory_get_dirty\n");
+//        DPRINTF("->cpu_physical_memory_get_dirty\n");
         if (cpu_physical_memory_get_dirty(current_addr, MIGRATION_DIRTY_FLAG)) {
             uint8_t *p;
             int cont = (block == last_block) ? RAM_SAVE_FLAG_CONTINUE : 0;
 
-            DPRINTF("<-cpu_physical_memory_get_dirty\n");
+//            DPRINTF("<-cpu_physical_memory_get_dirty\n");
             cpu_physical_memory_reset_dirty(current_addr,
                                             current_addr + TARGET_PAGE_SIZE,
                                             MIGRATION_DIRTY_FLAG);
 
-            DPRINTF("<-cpu_physical_memory_reset_dirty\n");
+//            DPRINTF("<-cpu_physical_memory_reset_dirty\n");
             p = block->host + offset;
 
             if (is_dup_page(p, *p)) {
@@ -205,9 +205,9 @@ static ram_addr_t ram_save_remaining(void)
         ram_addr_t addr;
         for (addr = block->offset; addr < block->offset + block->length;
              addr += TARGET_PAGE_SIZE) {
-            DPRINTF("->cpu_physical_memory_get_dirty@ram_save_remaining\n");
+//            DPRINTF("->cpu_physical_memory_get_dirty@ram_save_remaining\n");
             if (cpu_physical_memory_get_dirty(addr, MIGRATION_DIRTY_FLAG)) {
-                DPRINTF("<-cpu_physical_memory_get_dirty@ram_save_remaining\n");
+//                DPRINTF("<-cpu_physical_memory_get_dirty@ram_save_remaining\n");
                 count++;
             }
         }

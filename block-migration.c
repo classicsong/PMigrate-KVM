@@ -1092,7 +1092,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
             len = qemu_get_byte(f);
             qemu_get_buffer(f, (uint8_t *)device_name, len);
             device_name[len] = '\0';
-
+            DPRINTF("[DEV]%s\n", device_name);
             bs = bdrv_find(device_name);
             if (!bs) {
                 fprintf(stderr, "Error unknown block device %s\n",
