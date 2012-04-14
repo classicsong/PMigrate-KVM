@@ -1676,7 +1676,6 @@ int qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f);
 int 
 qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f) {
     SaveStateEntry *se;
-    struct timespec slave_sleep = {10, 1000000};
 
     DPRINTF("qemu_savevm_nolive_state\n");
     QTAILQ_FOREACH(se, &savevm_handlers, entry) {
@@ -1701,8 +1700,6 @@ qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f) {
     }
 
     qemu_fflush(f);
-    DPRINTF("qemu_savevm_nolive_state end\n");
-    nanosleep(&slave_sleep, NULL);
     qemu_put_byte(f, QEMU_VM_EOF);
 
     if (qemu_file_has_error(f))
