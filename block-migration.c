@@ -919,7 +919,7 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
     if (body->len != 0) {
         DPRINTF("additional disk task %d\n", body->len);
         char *p = (char *) body;
-        void *pp = (void *)p[(sizeof int) * 2 + sizeof(void *) * body->len];
+        void *pp = (void *)p[sizeof (int) * 2 + sizeof(void *) * body->len];
         pp = NULL;
         DPRINTF("DEBUG:%s\n", (char *) body->blocks);
         if (queue_push_task(task_q, body) < 0)
