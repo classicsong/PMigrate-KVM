@@ -897,6 +897,7 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
             /*
              * classicsong create task
              */
+            DPRINTF("add dirty block in %s:%d\n", blk->bmds->bs->device_name, body->len);
             body->blocks[body->len++].ptr = blk;
 
             bdrv_reset_dirty(bmds->bs, sector, nr_sectors);
@@ -919,7 +920,7 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
 
     if (body->len != 0) {
         char *p = (char *) body;
-        DPRINTF("DEBUG:%s\n", (char *) body->blocks);
+        DPRINTF("DEBUG:%s, %d\n", (char *) body->blocks, body->len);
         if (queue_push_task(task_q, body) < 0)
             fprintf(stderr, "Enqueue task error\n");
     } else
