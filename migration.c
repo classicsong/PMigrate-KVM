@@ -33,7 +33,7 @@
 #endif
 
 /* Migration speed throttling */
-static int64_t max_throttle = (32 << 20);
+static int64_t max_throttle = (128 << 20);
 
 static MigrationState *current_migration;
 
