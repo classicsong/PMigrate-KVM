@@ -40,6 +40,12 @@ static MigrationState *current_migration;
 static NotifierList migration_state_notifiers =
     NOTIFIER_LIST_INITIALIZER(migration_state_notifiers);
 
+void print_time(){
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    DPRINTF("[%ld]TIMESTAMP\n", tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
+
 int qemu_start_incoming_migration(const char *uri)
 {
     const char *p;
@@ -86,7 +92,7 @@ int do_migrate(Monitor *mon, const QDict *qdict, QObject **ret_data)
     int inc = qdict_get_try_bool(qdict, "inc", 0);
     const char *uri = qdict_get_str(qdict, "uri");
     const char *config_file = "/root/images/config";//qdict_get_str(qdict, "config");
-
+    print_time();
     if (current_migration &&
         current_migration->get_status(current_migration) == MIG_STATE_ACTIVE) {
         monitor_printf(mon, "migration already in progress\n");
@@ -458,7 +464,7 @@ migrate_fd_put(void *opaque) {
     }
     s->state = state;
     notifier_list_notify(&migration_state_notifiers);
-
+    print_time();
     return NULL;
 }
 
