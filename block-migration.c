@@ -918,7 +918,7 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
 
     if (body->len != 0) {
         DPRINTF("additional disk task %d\n", body->len);
-        body->blocks[body->len] = NULL;
+        body->blocks[body->len] =(void *) NULL;
         if (queue_push_task(task_q, body) < 0)
             fprintf(stderr, "Enqueue task error\n");
     } else
