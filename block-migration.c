@@ -917,8 +917,8 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
     }
 
     if (body->len != 0) {
-        DPRINTF("additional disk task %d, blktype%lx\n", body->len, body->type);
-//        body->type &= ~
+        DPRINTF("additional disk task %d, blktype %lx\n", body->len, body->type);
+        body->type = 2;
         char *p = (char *) body;
         void *pp = (void *)p[sizeof (int) * 2 + sizeof(void *) * body->len];
         pp = NULL;
