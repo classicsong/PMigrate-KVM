@@ -139,7 +139,7 @@ disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f) {
     len = strlen(blk->bmds->bs->device_name);
     qemu_put_byte(f, len);
     qemu_put_buffer(f, (uint8_t *)blk->bmds->bs->device_name, len);
-    DPRINTF("device name %s\n", blk->bmds->bs->device_name);
+//    DPRINTF("device name %s\n", blk->bmds->bs->device_name);
 
     qemu_put_buffer(f, blk->buf, BLOCK_SIZE);
 
@@ -1081,7 +1081,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
          */
         iter_num = (flags & DISK_VNUM_MASK) >> DISK_VNUM_OFFSET;
 	
-        DPRINTF("handling iter %d, flags %x:%lx\n", iter_num, flags, addr);
+//        DPRINTF("handling iter %d, flags %x:%lx\n", iter_num, flags, addr);
         /*
          * only BLK_MIG_FLAG_DEVICE_BLOCK to transfer data
          */
@@ -1095,7 +1095,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
             len = qemu_get_byte(f);
             qemu_get_buffer(f, (uint8_t *)device_name, len);
             device_name[len] = '\0';
-            DPRINTF("[DEV]%s\n", device_name);
+//            DPRINTF("[DEV]%s\n", device_name);
             bs = bdrv_find(device_name);
             if (!bs) {
                 fprintf(stderr, "Error unknown block device %s\n",
