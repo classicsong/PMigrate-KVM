@@ -218,7 +218,6 @@ start_host_slave(void *data) {
             /* Section type */
             qemu_put_byte(f, QEMU_VM_SECTION_PART);
             qemu_put_be32(f, s->mem_task_queue->section_id);
-            DPRINTF("[S] len=%lx\n", body->len);
             for (i = 0; i < body->len; i++) {
                 ram_save_block_slave(body->pages[i].addr, body->pages[i].ptr, 
                                      body->pages[i].block, s, s->mem_task_queue->iter_num);

@@ -431,7 +431,7 @@ static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
     int progress;
     unsigned long data_sent = 0;
     struct task_body *body;
-    struct timespec sleep = {1, 10000};
+    struct timespec sleep = {0, 100000000}; //sleep 100ms
 
     monitor_printf(mon, "disk bulk, transfer all disk data\n");
 
@@ -484,7 +484,6 @@ static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
                     while (task_q->task_pending > MAX_TASK_PENDING) {
                         nanosleep(&sleep, NULL);
                     }
-                        
 
                     if (queue_push_task(task_q, body) < 0)
                         fprintf(stderr, "Enqueue task error\n");
@@ -856,6 +855,7 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
     int nr_sectors;
     unsigned long data_sent = 0;
     struct task_body *body;
+    struct timespec sleep = {0, 100000000}; //sleep 100ms
 
     monitor_printf(mon, "last iteration for disk");
     //data_sent += flush_blks_master(task_q, f, 1);
@@ -904,6 +904,10 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
             data_sent += BLOCK_SIZE;
 
             if (body->len == DEFAULT_DISK_BATCH_LEN) {
+                while (task_q->task_pending > MAX_TASK_PENDING) {
+                    nanosleep(&sleep, NULL);
+                }
+
                 if (queue_push_task(task_q, body) < 0)
                     fprintf(stderr, "Enqueue task error\n");
 
@@ -919,8 +923,6 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
     }
 
     if (body->len != 0) {
-        char *p = (char *) body;
-        DPRINTF("DEBUG:%s, %d\n", (char *) body->blocks, body->len);
         if (queue_push_task(task_q, body) < 0)
             fprintf(stderr, "Enqueue task error\n");
     } else
@@ -976,8 +978,6 @@ disk_save_last_master(Monitor *mon, struct migration_task_queue *task_q, QEMUFil
     QSIMPLEQ_FOREACH(bmds, &block_mig_state.bmds_list, entry) {
         data_sent += mig_save_device_dirty_sync(mon, f, bmds, task_q);
     }    
-
-    blk_mig_cleanup(mon);
 
     if (qemu_file_has_error(f)) {
         return 0;

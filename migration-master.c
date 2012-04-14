@@ -48,6 +48,7 @@ extern unsigned long block_save_iter(int stage, Monitor *mon,
                                      struct migration_task_queue *task_queue, QEMUFile *f);
 extern int64_t get_remaining_dirty_master(void);
 extern uint64_t blk_read_remaining(void);
+extern void blk_mig_cleanup_master(Monitor *mon);
 
 //borrowed from savevm.c
 #define QEMU_VM_EOF                  0x00
@@ -414,6 +415,10 @@ host_disk_master(void * data) {
     //wait for slave end
     s->sender_barr->disk_state = BARR_STATE_ITER_TERMINATE;
     pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
+    
+    //clean the block device
+    blk_mig_cleanup_master(mon);
+
     //last iteration end
     pthread_barrier_wait(&s->last_barr);
 
