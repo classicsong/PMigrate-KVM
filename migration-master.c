@@ -408,8 +408,9 @@ host_disk_master(void * data) {
 
     //last iteration
     pthread_barrier_wait(&s->last_barr);
+    DPRINTF("ENTER LAST ITER\n");
     block_save_iter(QEMU_VM_SECTION_END, s->mon, s->disk_task_queue, s->file);
-
+    
     //wait for slave end
     s->sender_barr->disk_state = BARR_STATE_ITER_TERMINATE;
     pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
