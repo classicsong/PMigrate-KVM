@@ -909,7 +909,6 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
                 body->type = TASK_TYPE_DISK;
                 body->len = 0;
                 body->iter_num = task_q->iter_num;
-                DPRINTF("INIT NEW BLOCK\n");
             }
         }
 
@@ -918,7 +917,7 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
     }
 
     if (body->len != 0) {
-        DPRINTF("additional disk task %d\n", body->len);
+        DPRINTF("additional disk task %d, blktype%lx\n", body->len, body->type);
 //        body->type &= ~
         char *p = (char *) body;
         void *pp = (void *)p[sizeof (int) * 2 + sizeof(void *) * body->len];
