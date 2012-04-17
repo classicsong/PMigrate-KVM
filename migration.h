@@ -99,6 +99,7 @@ struct FdMigrationStateSlave
     struct migration_task_queue *mem_task_queue;
     struct migration_task_queue *disk_task_queue;
     struct migration_barrier *sender_barr;
+    int id;
 };
 
 void process_incoming_migration(QEMUFile *f);

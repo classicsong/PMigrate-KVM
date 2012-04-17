@@ -121,9 +121,9 @@ static void blk_send(QEMUFile *f, BlkMigBlock * blk)
     qemu_put_buffer(f, blk->buf, BLOCK_SIZE);
 }
 
-void disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f);
+unsigned long disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f);
 //classicsong
-void
+unsigned long
 disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f) {
     int len;
     BlkMigBlock *blk = (BlkMigBlock *)ptr;
@@ -144,6 +144,8 @@ disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f) {
 
     qemu_free(blk->buf);
     qemu_free(blk);
+
+    return BLOCK_SIZE;
 }
 
 int blk_mig_active(void)
@@ -477,7 +479,6 @@ static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
                 body->blocks[body->len++].ptr = blk;
                 
                 bdrv_reset_dirty(bmds->bs, sector, nr_sectors);
-                data_sent += BLOCK_SIZE;
 
                 if (body->len == DEFAULT_DISK_BATCH_LEN) {
                     while (task_q->task_pending > MAX_TASK_PENDING) {
@@ -530,8 +531,6 @@ static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
     }
 
     block_mig_state.bulk_completed = 1;
-
-    DPRINTF("Send disk data %lx\n", data_sent);
 
     return data_sent;
 }
