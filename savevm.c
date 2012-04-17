@@ -1335,7 +1335,6 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
     VMStateField *field = vmsd->fields;
     int ret;
 
-    fprintf(stderr, "vmstate_save new style %s\n", field->name);
     if (version_id > vmsd->version_id) {
         return -EINVAL;
     }
@@ -1409,7 +1408,6 @@ void vmstate_save_state(QEMUFile *f, const VMStateDescription *vmsd,
 {
     VMStateField *field = vmsd->fields;
 
-    fprintf(stderr, "vmstate_save new style %s\n", field->name);
     if (vmsd->pre_save) {
         vmsd->pre_save(opaque);
     }

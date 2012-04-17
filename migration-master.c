@@ -192,12 +192,14 @@ host_memory_master(void *data) {
          *    and the iteration is not the last iteration
          * skip the next mem iteration
          */
+        /*
         if (((data_remaining/(s->mem_task_queue->bwidth + s->disk_task_queue->bwidth)) < 
              (s->para_config->max_downtime/2)) 
             && s->laster_iter != 1) {
             bwidth = qemu_get_clock_ns(rt_clock);
             goto skip_iter;
         }
+        */
         /*
          * if skip the iteration
          * the iteration number of memory is not increased
@@ -211,6 +213,7 @@ host_memory_master(void *data) {
 
     //last iteration
     pthread_barrier_wait(&s->last_barr);
+    bwidth = qemu_get_clock_ns(rt_clock);
     ram_save_iter(QEMU_VM_SECTION_END, s->mem_task_queue, s->file);
 
     //wait for slave end
@@ -218,6 +221,7 @@ host_memory_master(void *data) {
     pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
     //last iteration end
     pthread_barrier_wait(&s->last_barr);
+    DPRINTF("last iteration time %f\n", (qemu_get_clock_ns(rt_clock) - bwidth)/100000);
 
     DPRINTF("Mem master end\n");
     return NULL;
@@ -390,6 +394,7 @@ host_disk_master(void * data) {
          *    and the iteration is not the last iteration
          * skip the next mem iteration
          */
+        /*
         if (((data_remaining/(s->mem_task_queue->bwidth + s->disk_task_queue->bwidth)) < 
              (s->para_config->max_downtime/2)) 
             && s->laster_iter != 1) {
@@ -397,6 +402,7 @@ host_disk_master(void * data) {
             bwidth = qemu_get_clock_ns(rt_clock);
             goto skip_iter;
         }
+        */
         /*
          * if skip the iteration
          * the iteration number is not increased

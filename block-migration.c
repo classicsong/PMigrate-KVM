@@ -451,7 +451,7 @@ static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
                 return 0;
             }
 
-            DPRINTF("handle bmds %p, sector [%lx:%lx]\n", bmds, bmds->cur_sector, bmds->total_sectors);
+            //DPRINTF("handle bmds %p, sector [%lx:%lx]\n", bmds, bmds->cur_sector, bmds->total_sectors);
             for (sector = bmds->cur_sector; sector < bmds->total_sectors;) {
                 if (total_sectors - sector < BDRV_SECTORS_PER_DIRTY_CHUNK) {
                     nr_sectors = total_sectors - sector;

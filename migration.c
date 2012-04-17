@@ -443,7 +443,6 @@ migrate_fd_put(void *opaque) {
     /*
      * wait for last iteration of memory and disk
      */
-    pthread_barrier_wait(&s->last_barr);
     if (qemu_savevm_nolive_state(s->mon, s->file) < 0) {
         DPRINTF("Migrate VM error in nolive state\n");
         if (old_vm_running) {
@@ -461,6 +460,8 @@ migrate_fd_put(void *opaque) {
         state = MIG_STATE_ERROR;
     }
     s->state = state;
+    pthread_barrier_wait(&s->last_barr);
+
     notifier_list_notify(&migration_state_notifiers);
     print_time();
     return NULL;
