@@ -47,7 +47,7 @@ typedef struct QEMUFileBuffered
     struct timeval last_put;
 } QEMUFileBuffered;
 
-/* scaling factor to convert between MB/s and time in usecs, copy from xen*/
+/* scaling factor to convert between Mb/s and time in usecs, copy from xen*/
 #define RATE_TO_BTU 781250
 /* Amount in bytes we allow ourselves to send in a burst */
 #define BURST_BUDGET (100 * 1024)
