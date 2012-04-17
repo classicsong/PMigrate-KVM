@@ -396,7 +396,7 @@ void migrate_fd_connect(FdMigrationState *s)
                                       migrate_fd_wait_for_unfreeze,
                                       migrate_fd_close);
 
-    DPRINTF("beginning savevm\n");
+    DPRINTF("beginning savevm, %lx\n", s->bandwidth_limit);
     ret = qemu_migrate_savevm_state_begin(s, s->mon, s->file, s->mig_state.blk,
                                           s->mig_state.shared);
     if (ret < 0) {

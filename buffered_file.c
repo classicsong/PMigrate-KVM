@@ -50,7 +50,7 @@ typedef struct QEMUFileBuffered
 /* scaling factor to convert between MB/s and time in usecs, copy from xen*/
 #define RATE_TO_BTU 781250
 /* Amount in bytes we allow ourselves to send in a burst */
-#define BURST_BUDGET (64 * 1024)
+#define BURST_BUDGET (100 * 1024)
 
 //#define DEBUG_BUFFERED_FILE
 #ifdef DEBUG_BUFFERED_FILE
@@ -421,7 +421,7 @@ qemu_fopen_ops_buffered_slave(void *opaque,
     s = qemu_mallocz(sizeof(*s));
 
     s->opaque = opaque;
-    s->xfer_limit = bytes_per_sec / 1024;
+    s->xfer_limit = bytes_per_sec / (1024 * 1024);
     s->put_buffer = put_buffer;
     s->put_ready = put_ready;
     s->wait_for_unfreeze = wait_for_unfreeze;
