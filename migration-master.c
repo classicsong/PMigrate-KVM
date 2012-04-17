@@ -426,13 +426,13 @@ host_disk_master(void * data) {
     //wait for slave end
     s->sender_barr->disk_state = BARR_STATE_ITER_TERMINATE;
     pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
-    
-    //clean the block device
-    blk_mig_cleanup_master(mon);
-
+        
     //last iteration end
     pthread_barrier_wait(&s->last_barr);
 
+    //clean the block device
+    blk_mig_cleanup_master(mon);
+    
     DPRINTF("Disk master end\n");
     return NULL;
 }
