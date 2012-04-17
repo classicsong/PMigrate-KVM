@@ -271,7 +271,7 @@ void init_host_slaves(struct FdMigrationState *s) {
         int ssl_type = s->para_config->SSL_type;
 
         slave_s = tcp_start_outgoing_migration_slave(s->mon, 
-                                                     dest_ip, s->bandwidth_limit + 512 * 1024 * 1024,
+                                                     dest_ip, s->bandwidth_limit + 256 * 1024 * 1024 * i,
                                                      ssl_type);
         slave_s->mem_task_queue = s->mem_task_queue;
         slave_s->disk_task_queue = s->disk_task_queue;
