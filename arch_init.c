@@ -368,6 +368,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
         offset += TARGET_PAGE_SIZE;
          
         if (offset >= block->length) {
+            DPRINTF("put data of block %s, data size %lx", block->idstr, bytes_sent);
             offset = 0;
             block = QLIST_NEXT(block, next);
             //hit the iteration end
@@ -461,7 +462,7 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
         qemu_put_be64(f, ram_bytes_total() | RAM_SAVE_FLAG_MEM_SIZE);
 
         QLIST_FOREACH(block, &ram_list.blocks, next) {
-            DPRINTF("Put mem block %s\n", block->idstr);
+            DPRINTF("Put mem block %s, size %lx\n", block->idstr, block->length);
             qemu_put_byte(f, strlen(block->idstr));
             qemu_put_buffer(f, (uint8_t *)block->idstr, strlen(block->idstr));
             qemu_put_be64(f, block->length);
@@ -475,7 +476,8 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
         qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
         qemu_fflush(f);
 
-        DPRINTF("Finish memory negotiation start memory master\n");
+        DPRINTF("Finish memory negotiation start memory master, total memory %lx\n", 
+                ram_bytes_total());
 
         create_host_memory_master(opaque);
 

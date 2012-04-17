@@ -388,7 +388,6 @@ extern void start_check(void *f);
 void migrate_fd_connect(FdMigrationState *s)
 {
     int ret;
-    struct timespec slave_sleep = {10, 1000000};
 
     s->file = qemu_fopen_ops_buffered(s,
                                       s->bandwidth_limit,
@@ -425,7 +424,6 @@ migrate_fd_put(void *opaque) {
     FdMigrationState *s = opaque;
     int old_vm_running = vm_running;
     int state;
-    struct timespec slave_sleep = {10, 1000000};
 
     if (s->state != MIG_STATE_ACTIVE) {
         DPRINTF("put_ready returning because of non-active state\n");

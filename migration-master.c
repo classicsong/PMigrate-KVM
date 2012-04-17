@@ -48,7 +48,6 @@ extern unsigned long block_save_iter(int stage, Monitor *mon,
                                      struct migration_task_queue *task_queue, QEMUFile *f);
 extern int64_t get_remaining_dirty_master(void);
 extern uint64_t blk_read_remaining(void);
-extern void blk_mig_cleanup_master(Monitor *mon);
 
 //borrowed from savevm.c
 #define QEMU_VM_EOF                  0x00
@@ -304,8 +303,9 @@ host_disk_master(void * data) {
          * add barrier here to sync for iterations
          */
         s->sender_barr->disk_state = BARR_STATE_ITER_END;
-        hold_lock = !pthread_mutex_trylock(&s->sender_barr->master_lock);
+        DPRINTF("Disk master end, time %f\n", (qemu_get_clock_ns(rt_clock) - bwidth)/1000000);
 
+        hold_lock = !pthread_mutex_trylock(&s->sender_barr->master_lock);
         pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
 
         /*
@@ -316,7 +316,8 @@ host_disk_master(void * data) {
         blk_mig_reset_dirty_cursor_master();
 
         bwidth = qemu_get_clock_ns(rt_clock) - bwidth;
-        DPRINTF("Disk send this iter %lx, bwidth %f\n", s->disk_task_queue->sent_this_iter, bwidth);
+        DPRINTF("Disk send this iter %lx, bwidth %f\n", s->disk_task_queue->sent_this_iter, 
+                (bwidth/1000000));
         bwidth = s->disk_task_queue->sent_this_iter / bwidth;
 
         /*
