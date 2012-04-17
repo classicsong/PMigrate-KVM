@@ -180,7 +180,7 @@ start_host_slave(void *data) {
     f = s->file;
     pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
 
-    DPRINTF("slave start migration\n");
+    DPRINTF("slave start migration, %lx\n", s->bandwidth_limit/1024);
 
     /*
      * wait for following commands

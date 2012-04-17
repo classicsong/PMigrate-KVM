@@ -169,10 +169,10 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
      * wait for budget here
      */
     if (s->budget < 0) {
-        s->burst_time_us = RATE_TO_BTU / s->xfer_limit;
+        s->burst_time_us = 10000; //RATE_TO_BTU / s->xfer_limit;
 
         if (s->last_put.tv_sec == 0) {
-            s->budget += BURST_BUDGET;
+            s->budget += s->xfer_limit;
             gettimeofday(&s->last_put, NULL);
         }
         else 
@@ -181,7 +181,7 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
                 gettimeofday(&now, NULL);
                 delta = tv_delta(&now, &s->last_put);
                 while (delta > s->burst_time_us) {
-                    s->budget += BURST_BUDGET;
+                    s->budget += s->xfer_limit;
                     s->last_put.tv_usec += s->burst_time_us;
                     if (s->last_put.tv_usec > 1000000) {
                         s->last_put.tv_usec -= 1000000;
@@ -421,7 +421,7 @@ qemu_fopen_ops_buffered_slave(void *opaque,
     s = qemu_mallocz(sizeof(*s));
 
     s->opaque = opaque;
-    s->xfer_limit = bytes_per_sec / (1024 * 1024);
+    s->xfer_limit = bytes_per_sec / 1024;
     s->put_buffer = put_buffer;
     s->put_ready = put_ready;
     s->wait_for_unfreeze = wait_for_unfreeze;
