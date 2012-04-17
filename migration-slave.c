@@ -180,8 +180,7 @@ start_host_slave(void *data) {
     f = s->file;
     pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
 
-    DPRINTF("slave start migration, %lx\n", s->bandwidth_limit/1024);
-
+    DPRINTF("slave start migration, %lx, file %p\n", s->bandwidth_limit/1024, f);
     /*
      * wait for following commands
      * As disk task maybe limited by the disk throughput, so we perfer to transfer disk first and then memory
@@ -278,6 +277,7 @@ void init_host_slaves(struct FdMigrationState *s) {
         slave_s->disk_task_queue = s->disk_task_queue;
         slave_s->sender_barr = s->sender_barr;
 
+        DPRINTF("slave_s is %p\n", slave_s);
         pthread_create(&tid, NULL, start_host_slave, slave_s);
         slave->slave_id = tid;
         slave->next = s->slave_list;
