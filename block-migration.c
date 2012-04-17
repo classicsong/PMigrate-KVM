@@ -1054,6 +1054,8 @@ static int block_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
     //return ((stage == 2) && is_stage2_completed());
 }
 
+__thread unsigned long total_disk_write = 0UL;
+
 static int block_load(QEMUFile *f, void *opaque, int version_id)
 {
     static int banner_printed;
@@ -1065,6 +1067,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
     int64_t total_sectors = 0;
     int nr_sectors;
     int iter_num;
+    unsigned long time_delta;
 
     //DPRINTF("Entering block_load\n");
     /*
@@ -1152,8 +1155,9 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
                 goto re_check_nor;
             }
 
+            time_delta = qemu_get_clock_ns(rt_clock);
             ret = bdrv_write(bs, addr, buf, nr_sectors);
-
+            total_disk_write += (qemu_get_clock_ns(rt_clock) - time_delta);
             /*
              * now we release the block
              */
