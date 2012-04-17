@@ -242,8 +242,8 @@ create_host_memory_master(void *opaque) {
     s->master_list = master;
 }
 
-extern unsigned long total_disk_read = 0UL;
-extern unsigned long total_disk_put_task = 0UL;
+extern unsigned long total_disk_read;
+extern unsigned long total_disk_put_task;
 
 void *
 host_disk_master(void * data) {

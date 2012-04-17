@@ -419,8 +419,8 @@ static void init_blk_migration(Monitor *mon, QEMUFile *f)
     bdrv_iterate(init_blk_migration_it, &tmp);
 }
 
-static unsigned long total_disk_read = 0UL;
-static unsigned long total_disk_put_task = 0UL;
+unsigned long total_disk_read = 0UL;
+unsigned long total_disk_put_task = 0UL;
 
 static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f, 
                                                     struct migration_task_queue *task_q)
