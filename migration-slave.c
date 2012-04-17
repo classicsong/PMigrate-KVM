@@ -122,7 +122,7 @@ start_host_slave(void *data) {
     struct sockaddr_in addr;
     int i, ret;
     QEMUFile *f;
-    struct timespec slave_sleep = {0, 1000000};
+    struct timespec slave_sleep = {0, 100000};
     sigset_t set;
 
     sigemptyset(&set);

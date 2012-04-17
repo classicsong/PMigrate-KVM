@@ -419,6 +419,9 @@ static void init_blk_migration(Monitor *mon, QEMUFile *f)
     bdrv_iterate(init_blk_migration_it, &tmp);
 }
 
+static unsigned long total_disk_read = 0UL;
+static unsigned long total_disk_put_task = 0UL;
+
 static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f, 
                                                     struct migration_task_queue *task_q)
 {
@@ -432,6 +435,7 @@ static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
     unsigned long data_sent = 0;
     struct task_body *body;
     struct timespec sleep = {0, 100000000}; //sleep 100ms
+    unsigned long time_delta;
 
     monitor_printf(mon, "disk bulk, transfer all disk data\n");
 
@@ -466,12 +470,15 @@ static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
                 blk->nr_sectors = nr_sectors;
                 blk->done = 0;
     
+
+                time_delta = qemu_get_clock_ns(rt_clock);
                 if (bdrv_read(bmds->bs, sector, blk->buf,
                               nr_sectors) < 0) {
                     fprintf(stderr, "Error reading block device");
                     return -1;
                 }
-     
+                total_disk_read += (qemu_get_clock_ns(rt_clock) - time_delta);
+
                 /*
                  * classicsong create task
                  */
@@ -481,6 +488,7 @@ static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
                 data_sent += BLOCK_SIZE;
 
                 if (body->len == DEFAULT_DISK_BATCH_LEN) {
+                    time_delta = qemu_get_clock_ns(rt_clock);
                     while (task_q->task_pending > MAX_TASK_PENDING) {
                         nanosleep(&sleep, NULL);
                     }
@@ -492,6 +500,7 @@ static unsigned long blk_mig_save_bulked_block_sync(Monitor *mon, QEMUFile *f,
                     body->type = TASK_TYPE_DISK;
                     body->len = 0;
                     body->iter_num = task_q->iter_num;
+                    total_disk_put_task += (qemu_get_clock_ns(rt_clock) - time_delta);
                 }
 
                 sector += BDRV_SECTORS_PER_DIRTY_CHUNK;

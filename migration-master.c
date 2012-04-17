@@ -242,6 +242,9 @@ create_host_memory_master(void *opaque) {
     s->master_list = master;
 }
 
+extern unsigned long total_disk_read = 0UL;
+extern unsigned long total_disk_put_task = 0UL;
+
 void *
 host_disk_master(void * data) {
     struct FdMigrationState *s = (struct FdMigrationState *) data;
@@ -307,7 +310,8 @@ host_disk_master(void * data) {
          * add barrier here to sync for iterations
          */
         s->sender_barr->disk_state = BARR_STATE_ITER_END;
-        DPRINTF("Disk master end, time %f\n", (qemu_get_clock_ns(rt_clock) - bwidth)/1000000);
+        DPRINTF("Disk master end, time %f, %ld, %ld\n", (qemu_get_clock_ns(rt_clock) - bwidth)/1000000, 
+                total_disk_read/1000000, total_disk_put_task/1000000);
 
         hold_lock = !pthread_mutex_trylock(&s->sender_barr->master_lock);
         pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
