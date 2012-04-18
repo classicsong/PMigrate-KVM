@@ -221,7 +221,6 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
             break;
         }
 
-        DPRINTF("put %zd byte(s)\n", ret);
         offset += ret;
     }
 
