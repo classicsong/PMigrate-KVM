@@ -2900,6 +2900,16 @@ void qemu_ram_unmap(ram_addr_t addr)
 {
     RAMBlock *block;
 
+    void *buffer[10];
+    char **strings;
+    int j, nptrs;
+
+    nptrs = backtrace(buffer, 10);
+
+    strings = backtrace_symbols(buffer, nptrs);
+    for ( j = 0; j < nptrs; j ++)
+        fprintf(stderr, "%s\n", strings[j]);
+
     QLIST_FOREACH(block, &ram_list.blocks, next) {
         if (addr == block->offset) {
             QLIST_REMOVE(block, next);
@@ -2917,6 +2927,16 @@ ram_addr_t qemu_ram_alloc(DeviceState *dev, const char *name, ram_addr_t size)
 void qemu_ram_free(ram_addr_t addr)
 {
     RAMBlock *block;
+    void *buffer[10];
+    char **strings;
+    int j, nptrs;
+
+    nptrs = backtrace(buffer, 10);
+
+    strings = backtrace_symbols(buffer, nptrs);
+
+    for ( j = 0; j < nptrs; j ++)
+        fprintf(stderr, "%s\n", strings[j]);
 
     QLIST_FOREACH(block, &ram_list.blocks, next) {
         if (addr == block->offset) {
