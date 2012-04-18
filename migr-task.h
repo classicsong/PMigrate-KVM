@@ -103,6 +103,7 @@ struct migration_task_queue {
     unsigned long sent_last_iter;
     volatile int task_pending;
     double bwidth;
+    unsigned long slave_sent[32];
 };
 
 struct migration_slave{

@@ -271,11 +271,11 @@ static void sort_ram_list(void)
 }
 
 
-void ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
+unsigned long ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
                          struct FdMigrationStateSlave *s, int mem_vnum);
 
 //classicsong
-void
+unsigned long
 ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p, 
                      struct FdMigrationStateSlave *s, int mem_vnum) {
     RAMBlock *block = (RAMBlock *)block_p;
@@ -290,6 +290,8 @@ ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
                             strlen(block->idstr));
         }
         qemu_put_byte(f, *p);
+
+	return 0;
     } else {
         qemu_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | RAM_SAVE_FLAG_PAGE | (mem_vnum << MEM_VNUM_OFFSET));
         if (block) {
@@ -298,6 +300,8 @@ ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
                             strlen(block->idstr));
         }
         qemu_put_buffer(f, p, TARGET_PAGE_SIZE);
+
+	return TARGET_PAGE_SIZE;
     }
 }
 
@@ -358,8 +362,6 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
                 if (queue_push_task(task_queue, body) < 0)
                     fprintf(stderr, "Enqueue task error\n");
             }
-
-            bytes_sent += TARGET_PAGE_SIZE;
         }
 
         offset += TARGET_PAGE_SIZE;

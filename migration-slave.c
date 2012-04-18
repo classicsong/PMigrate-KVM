@@ -124,7 +124,8 @@ start_host_slave(void *data) {
     QEMUFile *f;
     struct timespec slave_sleep = {0, 100000};
     sigset_t set;
-
+    unsigned long data_sent;
+    
     sigemptyset(&set);
     sigaddset(&set, SIGUSR2);
     sigaddset(&set, SIGIO);
@@ -200,7 +201,9 @@ start_host_slave(void *data) {
              * handle disk
              */
             for (i = 0; i < body->len; i++) {
-                disk_save_block_slave(body->blocks[i].ptr, body->iter_num, s->file);
+                s->disk_task_queue->slave_sent[s->id] += 
+		  disk_save_block_slave(body->blocks[i].ptr, 
+					body->iter_num, s->file);
             }
 
             /* End of the single task */
@@ -218,8 +221,9 @@ start_host_slave(void *data) {
             qemu_put_byte(f, QEMU_VM_SECTION_PART);
             qemu_put_be32(f, s->mem_task_queue->section_id);
             for (i = 0; i < body->len; i++) {
-                ram_save_block_slave(body->pages[i].addr, body->pages[i].ptr, 
-                                     body->pages[i].block, s, s->mem_task_queue->iter_num);
+                s->mem_task_queue->slave_sent[s->id] += 
+		  ram_save_block_slave(body->pages[i].addr, body->pages[i].ptr, 
+				       body->pages[i].block, s, s->mem_task_queue->iter_num);
             }
 
             /* End of the single task */
@@ -242,6 +246,8 @@ start_host_slave(void *data) {
                 qemu_put_byte(f, QEMU_VM_EOF);
                 qemu_fflush(f);
                 pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
+
+		data_sent = 0;
                 break;
             }
 
@@ -276,6 +282,7 @@ void init_host_slaves(struct FdMigrationState *s) {
         slave_s->mem_task_queue = s->mem_task_queue;
         slave_s->disk_task_queue = s->disk_task_queue;
         slave_s->sender_barr = s->sender_barr;
+	slave_s->id = i;
 
         DPRINTF("slave_s is %p\n", slave_s);
         pthread_create(&tid, NULL, start_host_slave, slave_s);

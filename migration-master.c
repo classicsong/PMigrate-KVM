@@ -69,6 +69,7 @@ host_memory_master(void *data) {
     int iter_num = 0;
     int hold_lock = 0;
     sigset_t set;
+    int i;
 
     sigemptyset(&set);
     sigaddset(&set, SIGUSR2);
@@ -95,7 +96,7 @@ host_memory_master(void *data) {
          * dispatch job here
          * ram_save_iter will 
          */
-        s->mem_task_queue->sent_this_iter += ram_save_iter(QEMU_VM_SECTION_PART, s->mem_task_queue, s->file);
+        ram_save_iter(QEMU_VM_SECTION_PART, s->mem_task_queue, s->file);
 
     skip_iter:
         /*
@@ -124,6 +125,9 @@ host_memory_master(void *data) {
             qemu_file_set_error(f);
             return 0;
         }
+
+	for ( i = 0; i < s->num_slaves; i++)
+	    s->mem_task_queue->sent_this_iter += s->mem_task_queue->slave_sent[i];
 
         bwidth = qemu_get_clock_ns(rt_clock) - bwidth;
         DPRINTF("Mem send this iter %lx, bwidth %f\n", s->mem_task_queue->sent_this_iter, bwidth);
@@ -257,6 +261,7 @@ host_disk_master(void * data) {
     Monitor *mon = s->mon;
     int hold_lock;
     sigset_t set;
+    int i;
 
     sigemptyset(&set);
     sigaddset(&set, SIGUSR2);
@@ -302,8 +307,8 @@ host_disk_master(void * data) {
          * dispatch job here
          * ram_save_iter will 
          */
-        s->disk_task_queue->sent_this_iter += block_save_iter(QEMU_VM_SECTION_PART, mon,
-                                                              s->disk_task_queue, s->file);
+        block_save_iter(QEMU_VM_SECTION_PART, mon,
+			s->disk_task_queue, s->file);
 
     skip_iter:
         /*
@@ -322,6 +327,9 @@ host_disk_master(void * data) {
          * through bdrv_reset_dirty(bmds->bs, sector, nr_sectors);
          */
         blk_mig_reset_dirty_cursor_master();
+
+	for ( i = 0; i < s->num_slaves; i++)
+	    s->disk_task_queue->sent_this_iter += s->disk_task_queue->slave_sent[i];
 
         bwidth = qemu_get_clock_ns(rt_clock) - bwidth;
         DPRINTF("Disk send this iter %lx, bwidth %f\n", s->disk_task_queue->sent_this_iter, 
