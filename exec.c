@@ -2833,18 +2833,6 @@ ram_addr_t qemu_ram_alloc_from_ptr(DeviceState *dev, const char *name,
 {
     RAMBlock *new_block, *block;
 
-    void *buffer[10];
-    char **strings;
-    int j, nptrs;
-
-    nptrs = backtrace(buffer, 10);
-
-    strings = backtrace_symbols(buffer, nptrs);
-    fprintf(stderr, "in ram_alloc_from_ptr\n");
-    for ( j = 0; j < nptrs; j ++)
-        fprintf(stderr, "%s\n", strings[j]);
-
-
     size = TARGET_PAGE_ALIGN(size);
     new_block = qemu_mallocz(sizeof(*new_block));
 
@@ -2940,16 +2928,6 @@ ram_addr_t qemu_ram_alloc(DeviceState *dev, const char *name, ram_addr_t size)
 void qemu_ram_free(ram_addr_t addr)
 {
     RAMBlock *block;
-    void *buffer[10];
-    char **strings;
-    int j, nptrs;
-
-    nptrs = backtrace(buffer, 10);
-
-    strings = backtrace_symbols(buffer, nptrs);
-
-    for ( j = 0; j < nptrs; j ++)
-        fprintf(stderr, "%s\n", strings[j]);
 
     QLIST_FOREACH(block, &ram_list.blocks, next) {
         if (addr == block->offset) {
@@ -2988,9 +2966,6 @@ void qemu_ram_free(ram_addr_t addr)
 void *qemu_get_ram_ptr(ram_addr_t addr)
 {
     RAMBlock *block;
-    void *buffer[10];
-    char **strings;
-    int j, nptrs;
 
     QLIST_FOREACH(block, &ram_list.blocks, next) {
         if (addr - block->offset < block->length) {
@@ -3002,13 +2977,6 @@ void *qemu_get_ram_ptr(ram_addr_t addr)
     }
 
     fprintf(stderr, "Bad ram offset %" PRIx64 "\n", (uint64_t)addr);
-
-    nptrs = backtrace(buffer, 10);
-
-    strings = backtrace_symbols(buffer, nptrs);
-
-    for ( j = 0; j < nptrs; j ++)
-        fprintf(stderr, "%s\n", strings[j]);
     abort();
 
     return NULL;

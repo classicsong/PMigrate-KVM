@@ -254,17 +254,6 @@ static void sort_ram_list(void)
     RAMBlock *block, *nblock, **blocks;
     int n;
 
-    void *buffer[10];
-    char **strings;
-    int j, nptrs;
-
-    nptrs = backtrace(buffer, 10);
-
-    strings = backtrace_symbols(buffer, nptrs);
-    fprintf(stderr, "sort ram\n");
-    for ( j = 0; j < nptrs; j ++)
-        fprintf(stderr, "%s\n", strings[j]);
-
     n = 0;
     QLIST_FOREACH(block, &ram_list.blocks, next) {
         ++n;
