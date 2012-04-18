@@ -364,11 +364,13 @@ static int cpu_post_load(void *opaque, int version_id)
         env->fptags[i] = (env->fptag_vmstate >> i) & 1;
     }
 
+    //classicsong
+    
     cpu_breakpoint_remove_all(env, BP_CPU);
     cpu_watchpoint_remove_all(env, BP_CPU);
     for (i = 0; i < 4; i++)
         hw_breakpoint_insert(env, i);
-
+    
     tlb_flush(env, 1);
     return 0;
 }

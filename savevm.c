@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <zlib.h>
+#include <execinfo.h>
 
 /* Needed early for CONFIG_BSD etc. */
 #include "config-host.h"
@@ -1408,7 +1409,6 @@ void vmstate_save_state(QEMUFile *f, const VMStateDescription *vmsd,
 {
     VMStateField *field = vmsd->fields;
 
-    fprintf(stderr, "vmstate_save new style %s\n", field->name);
     if (vmsd->pre_save) {
         vmsd->pre_save(opaque);
     }
@@ -1454,12 +1454,17 @@ void vmstate_save_state(QEMUFile *f, const VMStateDescription *vmsd,
     vmstate_subsection_save(f, vmsd, opaque);
 }
 
+extern int ram_load(QEMUFile *f, void *opaque, int version_id);
+
 static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id)
 {
     if (!se->vmsd) {         /* Old style */
         //classicsong change it
-        return se->load_state(f, se, version_id);
-        //return se->load_state(f, se->opaque, version_id);
+        if (se->load_state == ram_load) {
+            return se->load_state(f, se, version_id);
+        }
+        
+        return se->load_state(f, se->opaque, version_id);
     }
     return vmstate_load_state(f, se->vmsd, se->opaque, version_id);
 }
@@ -1559,6 +1564,7 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
         if (se->save_live_state == NULL)
             continue;
 
+        DPRINTF("handle se->section_id %d\n", se->section_id);
         /* Section type */
         qemu_put_byte(f, QEMU_VM_SECTION_START);
         qemu_put_be32(f, se->section_id);
@@ -1573,18 +1579,16 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
         qemu_put_be32(f, se->version_id);
 
         se->save_live_state(mon, f, QEMU_VM_SECTION_START, s);
-
-        /* this should be done in block save live
-        if (se->save_live_state == ram_save_block)
-            create_host_disk_master(s);
-        */
     }
 
+    DPRINTF("At the end of savevm_state_begin\n");
     if (qemu_file_has_error(f)) {
+        DPRINTF("error qemu_file\n");
         qemu_savevm_state_cancel(mon, f);
         return -EIO;
     }
 
+    DPRINTF("before enter migrate_fd_put %d\n", s->file->buf_index);
     return 0;
 }
 
@@ -1694,6 +1698,7 @@ qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f) {
         vmstate_save(f, se);
     }
 
+    qemu_fflush(f);
     qemu_put_byte(f, QEMU_VM_EOF);
 
     if (qemu_file_has_error(f))
@@ -1922,7 +1927,6 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers) {
                 goto out;
             }
 
-            DPRINTF("slave handle task %d\n", section_id);
             /*
              * ram use ram_load
              * disk use block_load
@@ -1985,13 +1989,12 @@ int qemu_loadvm_state(QEMUFile *f)
 
         //classicsong add this
         int num_slaves, num_ips, ssl_type, i;
-        uint8_t ip_buf[32];               //32 bytes is enough for dest_ip:port
+        uint8_t *ip_buf;               //32 bytes is enough for dest_ip:port
 
-        DPRINTF("section type %d\n", section_type);
+        //DPRINTF("section type %d\n", section_type);
         switch (section_type) {
         case QEMU_VM_SECTION_START:
         case QEMU_VM_SECTION_FULL:
-            DPRINTF("Start transfer data\n");
 
             /* Read section start */
             section_id = qemu_get_be32(f);
@@ -2004,7 +2007,7 @@ int qemu_loadvm_state(QEMUFile *f)
             /* Find savevm section */
             se = find_se(idstr, instance_id);
             if (se == NULL) {
-                fprintf(stderr, "Unknown savevm section or instance '%s' %d\n", idstr, instance_id);
+                fprintf(stderr, "Unknown savevm section or instance '%s':%d %d\n", idstr, len, instance_id);
                 ret = -EINVAL;
                 goto out;
             }
@@ -2025,7 +2028,7 @@ int qemu_loadvm_state(QEMUFile *f)
             le->version_id = version_id;
             QLIST_INSERT_HEAD(&loadvm_handlers, le, entry);
 
-            DPRINTF("get se %s:%p\n", idstr, se);
+            DPRINTF("get se %s\n", idstr);
             ret = vmstate_load(f, se, le->version_id);
             if (ret < 0) {
                 fprintf(stderr, "qemu: warning: error while loading state for instance 0x%x of device '%s'\n",
@@ -2076,6 +2079,11 @@ int qemu_loadvm_state(QEMUFile *f)
             for (i = 0; i < num_ips; i++) {
                 pthread_t tid;
                 int len = qemu_get_be32(f);
+                /*
+                 * need to use heap obj
+                 * use stack obj will cause dungling pointer problem in creating slaves
+                 */
+                ip_buf = (uint8_t *)malloc(32 * sizeof(uint8_t));
 
                 qemu_get_buffer(f, ip_buf, len);
                 ip_buf[len] = 0;
@@ -2094,9 +2102,8 @@ int qemu_loadvm_state(QEMUFile *f)
         }
     }
 
-    DPRINTF("Hit End Barrier Master\n");
+    DPRINTF("Hit End Barrier Master %d\n", section_type);
     pthread_barrier_wait(&end_barrier);
-    DPRINTF("Get out of qemu_loadvm_state\n");
 
     cpu_synchronize_all_post_init();
 
@@ -2104,6 +2111,7 @@ int qemu_loadvm_state(QEMUFile *f)
 
 out:
     QLIST_FOREACH_SAFE(le, &loadvm_handlers, entry, new_le) {
+        DPRINTF("remove le %d\n", le->section_id);
         QLIST_REMOVE(le, entry);
         qemu_free(le);
     }

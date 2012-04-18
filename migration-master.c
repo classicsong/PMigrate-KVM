@@ -196,12 +196,14 @@ host_memory_master(void *data) {
          *    and the iteration is not the last iteration
          * skip the next mem iteration
          */
+        /*
         if (((data_remaining/(s->mem_task_queue->bwidth + s->disk_task_queue->bwidth)) < 
              (s->para_config->max_downtime/2)) 
             && s->laster_iter != 1) {
             bwidth = qemu_get_clock_ns(rt_clock);
             goto skip_iter;
         }
+        */
         /*
          * if skip the iteration
          * the iteration number of memory is not increased
@@ -215,6 +217,7 @@ host_memory_master(void *data) {
 
     //last iteration
     pthread_barrier_wait(&s->last_barr);
+    bwidth = qemu_get_clock_ns(rt_clock);
     ram_save_iter(QEMU_VM_SECTION_END, s->mem_task_queue, s->file);
 
     //wait for slave end
@@ -222,6 +225,7 @@ host_memory_master(void *data) {
     pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
     //last iteration end
     pthread_barrier_wait(&s->last_barr);
+    DPRINTF("last iteration time %f\n", (qemu_get_clock_ns(rt_clock) - bwidth)/100000);
 
     DPRINTF("Mem master end\n");
     return NULL;
@@ -241,6 +245,9 @@ create_host_memory_master(void *opaque) {
     master->next = s->master_list;
     s->master_list = master;
 }
+
+extern unsigned long total_disk_read;
+extern unsigned long total_disk_put_task;
 
 void *
 host_disk_master(void * data) {
@@ -308,8 +315,10 @@ host_disk_master(void * data) {
          * add barrier here to sync for iterations
          */
         s->sender_barr->disk_state = BARR_STATE_ITER_END;
-        hold_lock = !pthread_mutex_trylock(&s->sender_barr->master_lock);
+        DPRINTF("Disk master end, time %f, %ld, %ld\n", (qemu_get_clock_ns(rt_clock) - bwidth)/1000000, 
+                total_disk_read/1000000, total_disk_put_task/1000000);
 
+        hold_lock = !pthread_mutex_trylock(&s->sender_barr->master_lock);
         pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
 
         /*
@@ -323,7 +332,8 @@ host_disk_master(void * data) {
 	    s->disk_task_queue->sent_this_iter += s->disk_task_queue->slave_sent[i];
 
         bwidth = qemu_get_clock_ns(rt_clock) - bwidth;
-        DPRINTF("Disk send this iter %lx, bwidth %f\n", s->disk_task_queue->sent_this_iter, bwidth);
+        DPRINTF("Disk send this iter %lx, bwidth %f\n", s->disk_task_queue->sent_this_iter, 
+                (bwidth/1000000));
         bwidth = s->disk_task_queue->sent_this_iter / bwidth;
 
         /*
@@ -396,6 +406,7 @@ host_disk_master(void * data) {
          *    and the iteration is not the last iteration
          * skip the next mem iteration
          */
+        /*
         if (((data_remaining/(s->mem_task_queue->bwidth + s->disk_task_queue->bwidth)) < 
              (s->para_config->max_downtime/2)) 
             && s->laster_iter != 1) {
@@ -403,6 +414,7 @@ host_disk_master(void * data) {
             bwidth = qemu_get_clock_ns(rt_clock);
             goto skip_iter;
         }
+        */
         /*
          * if skip the iteration
          * the iteration number is not increased
@@ -416,14 +428,19 @@ host_disk_master(void * data) {
 
     //last iteration
     pthread_barrier_wait(&s->last_barr);
-    block_save_iter(QEMU_VM_SECTION_END, s->mon, s->mem_task_queue, s->file);
-
+    DPRINTF("ENTER LAST ITER\n");
+    block_save_iter(QEMU_VM_SECTION_END, s->mon, s->disk_task_queue, s->file);
+    
     //wait for slave end
     s->sender_barr->disk_state = BARR_STATE_ITER_TERMINATE;
     pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
+        
     //last iteration end
     pthread_barrier_wait(&s->last_barr);
 
+    //clean the block device
+    blk_mig_cleanup_master(mon);
+    
     DPRINTF("Disk master end\n");
     return NULL;
 }

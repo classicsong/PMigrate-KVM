@@ -140,14 +140,17 @@ static int ram_save_block(QEMUFile *f)
     current_addr = block->offset + offset;
 
     do {
+//        DPRINTF("->cpu_physical_memory_get_dirty\n");
         if (cpu_physical_memory_get_dirty(current_addr, MIGRATION_DIRTY_FLAG)) {
             uint8_t *p;
             int cont = (block == last_block) ? RAM_SAVE_FLAG_CONTINUE : 0;
 
+//            DPRINTF("<-cpu_physical_memory_get_dirty\n");
             cpu_physical_memory_reset_dirty(current_addr,
                                             current_addr + TARGET_PAGE_SIZE,
                                             MIGRATION_DIRTY_FLAG);
 
+//            DPRINTF("<-cpu_physical_memory_reset_dirty\n");
             p = block->host + offset;
 
             if (is_dup_page(p, *p)) {
@@ -202,7 +205,9 @@ static ram_addr_t ram_save_remaining(void)
         ram_addr_t addr;
         for (addr = block->offset; addr < block->offset + block->length;
              addr += TARGET_PAGE_SIZE) {
+//            DPRINTF("->cpu_physical_memory_get_dirty@ram_save_remaining\n");
             if (cpu_physical_memory_get_dirty(addr, MIGRATION_DIRTY_FLAG)) {
+//                DPRINTF("<-cpu_physical_memory_get_dirty@ram_save_remaining\n");
                 count++;
             }
         }
@@ -354,7 +359,6 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
                 last_block = NULL;
                 body_len = 0;
 
-                DPRINTF("put task %lx\n", body->pages[0].addr);
                 if (queue_push_task(task_queue, body) < 0)
                     fprintf(stderr, "Enqueue task error\n");
             }
@@ -381,7 +385,6 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
     if (body_len > 0) {
         body->len = body_len;
 
-        DPRINTF("put task %lx\n", body->pages[0].addr);
         if (queue_push_task(task_queue, body) < 0)
             fprintf(stderr, "Enqueue task error\n");
     }
@@ -457,7 +460,7 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
         qemu_put_be64(f, ram_bytes_total() | RAM_SAVE_FLAG_MEM_SIZE);
 
         QLIST_FOREACH(block, &ram_list.blocks, next) {
-            DPRINTF("Put mem block %s\n", block->idstr);
+            DPRINTF("Put mem block %s, size %lx\n", block->idstr, block->length);
             qemu_put_byte(f, strlen(block->idstr));
             qemu_put_buffer(f, (uint8_t *)block->idstr, strlen(block->idstr));
             qemu_put_be64(f, block->length);
@@ -471,7 +474,8 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
         qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
         qemu_fflush(f);
 
-        DPRINTF("Finish memory negotiation start memory master\n");
+        DPRINTF("Finish memory negotiation start memory master, total memory %lx\n", 
+                ram_bytes_total());
 
         create_host_memory_master(opaque);
 
@@ -508,8 +512,8 @@ static inline void *host_from_stream_offset(QEMUFile *f,
 
     QLIST_FOREACH(block, &ram_list.blocks, next) {
         if (!strncmp(id, block->idstr, sizeof(id))) {
-            DPRINTF("block host %p, block length %lx, %lx\n", block->host, block->length, 
-		    block->offset + offset);
+            //DPRINTF("block host %p, block length %lx, %lx\n", block->host, block->length, 
+		    //block->offset + offset);
             *index = (block->offset + offset) / TARGET_PAGE_SIZE;
             return block->host + offset;
         }
@@ -534,18 +538,18 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
     do {
         addr = qemu_get_be64(f);
 
-	DPRINTF("addr is %lx\n", addr);
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 
         //DPRINTF("se is %p, flags %x\n", se, flags);
         //DPRINTF("se version queue is %p\n", se->version_queue);
-        DPRINTF("addr is %lx:%lx, flags %x\n", addr, addr / TARGET_PAGE_SIZE, flags);
+        //DPRINTF("addr is %lx:%lx, flags %x\n", addr, addr / TARGET_PAGE_SIZE, flags);
         if (flags & RAM_SAVE_FLAG_MEM_SIZE) {
             /*
              * classicsong add version queue for memory
              * The queue length is equals to the number of pages guest VM has
              */
+            DPRINTF("init mem addr is %lx:%lx, flags %x\n", addr, addr / TARGET_PAGE_SIZE, flags);
             se->version_queue = (uint32_t *)calloc(addr / TARGET_PAGE_SIZE, sizeof(uint32_t));
             se->total_size = addr / TARGET_PAGE_SIZE;
 
@@ -683,9 +687,10 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             unsigned long index = 0;
 
             //DPRINTF("handle normal page\n");
-            if (version_id == 3)
+            if (version_id == 3){
+                DPRINTF("calling qemu_get_ram_ptr();\n");
                 host = qemu_get_ram_ptr(addr);
-            else
+            }else
 	        host = host_from_stream_offset(f, addr, flags, &index);
 
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
@@ -743,10 +748,6 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             return -EIO;
         }
     } while (!(flags & RAM_SAVE_FLAG_EOS));
-
-    /*
-     * need barrier for iterations
-     */
 
     return 0;
 }

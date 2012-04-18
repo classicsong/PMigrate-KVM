@@ -122,7 +122,7 @@ start_host_slave(void *data) {
     struct sockaddr_in addr;
     int i, ret;
     QEMUFile *f;
-    struct timespec slave_sleep = {0, 1000000};
+    struct timespec slave_sleep = {0, 100000};
     sigset_t set;
     unsigned long data_sent;
     
@@ -137,7 +137,7 @@ start_host_slave(void *data) {
         return NULL;
     }
 
-    DPRINTF("Start host slave, begin creating connection\n");
+    DPRINTF("Start host slave, begin creating connection, %s\n", s->dest_ip);
     /*
      * create network connection
      */
@@ -181,8 +181,7 @@ start_host_slave(void *data) {
     f = s->file;
     pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
 
-    DPRINTF("slave start migration\n");
-
+    DPRINTF("slave start migration, %lx, file %p\n", s->bandwidth_limit/1024, f);
     /*
      * wait for following commands
      * As disk task maybe limited by the disk throughput, so we perfer to transfer disk first and then memory
@@ -215,13 +214,12 @@ start_host_slave(void *data) {
         }
         /* check for memory */
         else if (queue_pop_task(s->mem_task_queue, &body) > 0) {
-            DPRINTF("get mem task, %lx: %p, %d, section id %d\n", body->pages[0].addr, 
-                    body->pages[0].ptr, 
-                    s->mem_task_queue->iter_num, s->mem_task_queue->section_id);
+            //DPRINTF("get mem task, %lx: %p, %d, section id %d\n", body->pages[0].addr, 
+            //       body->pages[0].ptr, 
+            //       s->mem_task_queue->iter_num, s->mem_task_queue->section_id);
             /* Section type */
             qemu_put_byte(f, QEMU_VM_SECTION_PART);
             qemu_put_be32(f, s->mem_task_queue->section_id);
-
             for (i = 0; i < body->len; i++) {
                 s->mem_task_queue->slave_sent[s->id] += 
 		  ram_save_block_slave(body->pages[i].addr, body->pages[i].ptr, 
@@ -286,6 +284,7 @@ void init_host_slaves(struct FdMigrationState *s) {
         slave_s->sender_barr = s->sender_barr;
 	slave_s->id = i;
 
+        DPRINTF("slave_s is %p\n", slave_s);
         pthread_create(&tid, NULL, start_host_slave, slave_s);
         slave->slave_id = tid;
         slave->next = s->slave_list;
@@ -310,6 +309,7 @@ struct dest_slave_para{
 //}
 
 extern void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers);
+extern __thread unsigned long total_disk_write;
 
 void *start_dest_slave(void *data) {
     struct dest_slave_para * para = (struct dest_slave_para *)data;
@@ -374,12 +374,14 @@ void *start_dest_slave(void *data) {
     }
 
     DPRINTF("DEST slave connection created %s\n", para->listen_ip);
+    free(para->listen_ip);
 
     /*
      * slave handle incoming data
      */
     slave_process_incoming_migration(f, para->handlers);
 
+    DPRINTF("Dest slave wait to end %lx\n", total_disk_write/1000000);
     pthread_barrier_wait(para->end_barrier);    
     DPRINTF("Dest slave end\n");
     //slave_loadvm_state();

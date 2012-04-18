@@ -33,12 +33,18 @@
 #endif
 
 /* Migration speed throttling */
-static int64_t max_throttle = (32 << 20);
+static int64_t max_throttle = 1024 * 1024 * 1024;
 
 static MigrationState *current_migration;
 
 static NotifierList migration_state_notifiers =
     NOTIFIER_LIST_INITIALIZER(migration_state_notifiers);
+
+void print_time(){
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    DPRINTF("[%ld]TIMESTAMP\n", tv.tv_sec * 1000 + tv.tv_usec / 1000);
+}
 
 int qemu_start_incoming_migration(const char *uri)
 {
@@ -86,7 +92,7 @@ int do_migrate(Monitor *mon, const QDict *qdict, QObject **ret_data)
     int inc = qdict_get_try_bool(qdict, "inc", 0);
     const char *uri = qdict_get_str(qdict, "uri");
     const char *config_file = "/root/images/config";//qdict_get_str(qdict, "config");
-
+    print_time();
     if (current_migration &&
         current_migration->get_status(current_migration) == MIG_STATE_ACTIVE) {
         monitor_printf(mon, "migration already in progress\n");
@@ -374,9 +380,10 @@ ssize_t migrate_fd_put_buffer(void *opaque, const void *data, size_t size)
     return ret;
 }
 
-void migrate_fd_put(void *opaque);
+void * migrate_fd_put(void *opaque);
 
 static pthread_t root_master;
+extern void start_check(void *f);
 
 void migrate_fd_connect(FdMigrationState *s)
 {
@@ -389,7 +396,7 @@ void migrate_fd_connect(FdMigrationState *s)
                                       migrate_fd_wait_for_unfreeze,
                                       migrate_fd_close);
 
-    DPRINTF("beginning savevm\n");
+    DPRINTF("beginning savevm, %lx\n", s->bandwidth_limit);
     ret = qemu_migrate_savevm_state_begin(s, s->mon, s->file, s->mig_state.blk,
                                           s->mig_state.shared);
     if (ret < 0) {
@@ -397,7 +404,7 @@ void migrate_fd_connect(FdMigrationState *s)
         migrate_fd_error(s);
         return;
     }
-    
+
     /*
      * classicsong use migrate_fd_put(s) instead of 
      * migrate_fd_put_ready
@@ -407,32 +414,21 @@ void migrate_fd_connect(FdMigrationState *s)
      * The main process has to wait for last interation in migrate_fd_put first
      */
     //migrate_fd_put_ready(s);
-    DPRINTF("main thread id %lx\n", pthread_self());
     pthread_create(&root_master, NULL, migrate_fd_put, s);
 }
 
 extern int qemu_savevm_nolive_state(Monitor *mon, QEMUFile *f);
 
-void 
+void *
 migrate_fd_put(void *opaque) {
     FdMigrationState *s = opaque;
     int old_vm_running = vm_running;
     int state;
-    sigset_t set;
-    struct timespec slave_sleep = {5, 1000000};
-
-    sigemptyset(&set);
-    sigaddset(&set, SIGUSR2);
-    sigaddset(&set, SIGIO);
-    sigaddset(&set, SIGALRM);
-    sigprocmask(SIG_BLOCK, &set, NULL);
 
     if (s->state != MIG_STATE_ACTIVE) {
         DPRINTF("put_ready returning because of non-active state\n");
-        return;
+        return NULL;
     }
-
-    DPRINTF("monitor thread id %lx\n", pthread_self());
 
     pthread_barrier_wait(&s->last_barr);
     DPRINTF("END migration\n");
@@ -447,10 +443,8 @@ migrate_fd_put(void *opaque) {
     /*
      * wait for last iteration of memory and disk
      */
-    pthread_barrier_wait(&s->last_barr);
-    nanosleep(&slave_sleep, NULL);
-    DPRINTF("before End of ALL\n");
     if (qemu_savevm_nolive_state(s->mon, s->file) < 0) {
+        DPRINTF("Migrate VM error in nolive state\n");
         if (old_vm_running) {
             vm_start();
         }
@@ -466,7 +460,11 @@ migrate_fd_put(void *opaque) {
         state = MIG_STATE_ERROR;
     }
     s->state = state;
+    pthread_barrier_wait(&s->last_barr);
+
     notifier_list_notify(&migration_state_notifiers);
+    print_time();
+    return NULL;
 }
 
 void migrate_fd_put_ready(void *opaque)

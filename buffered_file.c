@@ -47,7 +47,7 @@ typedef struct QEMUFileBuffered
     struct timeval last_put;
 } QEMUFileBuffered;
 
-/* scaling factor to convert between MB/s and time in usecs, copy from xen*/
+/* scaling factor to convert between Mb/s and time in usecs, copy from xen*/
 #define RATE_TO_BTU 781250
 /* Amount in bytes we allow ourselves to send in a burst */
 #define BURST_BUDGET (100 * 1024)
@@ -169,10 +169,10 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
      * wait for budget here
      */
     if (s->budget < 0) {
-        s->burst_time_us = RATE_TO_BTU / s->xfer_limit;
+        s->burst_time_us = 10000; //RATE_TO_BTU / s->xfer_limit;
 
         if (s->last_put.tv_sec == 0) {
-            s->budget += BURST_BUDGET;
+            s->budget += s->xfer_limit;
             gettimeofday(&s->last_put, NULL);
         }
         else 
@@ -181,7 +181,7 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
                 gettimeofday(&now, NULL);
                 delta = tv_delta(&now, &s->last_put);
                 while (delta > s->burst_time_us) {
-                    s->budget += BURST_BUDGET;
+                    s->budget += s->xfer_limit;
                     s->last_put.tv_usec += s->burst_time_us;
                     if (s->last_put.tv_usec > 1000000) {
                         s->last_put.tv_usec -= 1000000;
@@ -215,7 +215,7 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
         }
 
         if (ret <= 0) {
-            fprintf(stderr, "error putting\n");
+            fprintf(stderr, "error putting %d\n", ret);
             s->has_error = 1;
             offset = -EINVAL;
             break;

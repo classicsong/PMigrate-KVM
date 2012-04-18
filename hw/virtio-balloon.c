@@ -30,6 +30,14 @@
 #include <sys/mman.h>
 #endif
 
+#define DEBUG_BALLOON
+
+#ifdef DEBUG_BALLOON
+#define DPRINTF(fmt, ...) printf(fmt, ## __VA_ARGS__)
+#else
+#define DPRINTF(fmt, ...) do { } while (0)
+#endif
+
 /* Disable guest-provided stats by now (https://bugzilla.redhat.com/show_bug.cgi?id=623903) */
 #define ENABLE_GUEST_STATS   0
 
@@ -122,6 +130,7 @@ static void virtio_balloon_handle_output(VirtIODevice *vdev, VirtQueue *vq)
 
             /* Using qemu_get_ram_ptr is bending the rules a bit, but
                should be OK because we only want a single page.  */
+            DPRINTF("qemu_get_ram_ptr @ balloon_page\n");
             balloon_page(qemu_get_ram_ptr(addr), !!(vq == s->dvq));
         }
 

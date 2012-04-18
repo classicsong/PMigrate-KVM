@@ -124,7 +124,7 @@ MigrationState *tcp_start_outgoing_migration(Monitor *mon,
         return NULL;
     }
 
-    socket_set_nonblock(s->fd);
+    //socket_set_nonblock(s->fd);
 
     if (!detach) {
         migrate_fd_monitor_suspend(s, mon);
