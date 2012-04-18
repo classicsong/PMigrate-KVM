@@ -253,6 +253,18 @@ static void sort_ram_list(void)
 {
     RAMBlock *block, *nblock, **blocks;
     int n;
+
+    void *buffer[10];
+    char **strings;
+    int j, nptrs;
+
+    nptrs = backtrace(buffer, 10);
+
+    strings = backtrace_symbols(buffer, nptrs);
+    fprintf(stderr, "sort ram\n");
+    for ( j = 0; j < nptrs; j ++)
+        fprintf(stderr, "%s\n", strings[j]);
+
     n = 0;
     QLIST_FOREACH(block, &ram_list.blocks, next) {
         ++n;
@@ -330,6 +342,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
                 cont = 0;
             }
 
+            DPRINTF("reset dirty %lx, %lx\n", current_addr, block->offset);
             cpu_physical_memory_reset_dirty(current_addr,
                                             current_addr + TARGET_PAGE_SIZE,
                                             MIGRATION_DIRTY_FLAG);

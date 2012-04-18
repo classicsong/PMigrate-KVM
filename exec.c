@@ -2833,6 +2833,18 @@ ram_addr_t qemu_ram_alloc_from_ptr(DeviceState *dev, const char *name,
 {
     RAMBlock *new_block, *block;
 
+    void *buffer[10];
+    char **strings;
+    int j, nptrs;
+
+    nptrs = backtrace(buffer, 10);
+
+    strings = backtrace_symbols(buffer, nptrs);
+    fprintf(stderr, "in ram_alloc_from_ptr\n");
+    for ( j = 0; j < nptrs; j ++)
+        fprintf(stderr, "%s\n", strings[j]);
+
+
     size = TARGET_PAGE_ALIGN(size);
     new_block = qemu_mallocz(sizeof(*new_block));
 
@@ -2907,6 +2919,7 @@ void qemu_ram_unmap(ram_addr_t addr)
     nptrs = backtrace(buffer, 10);
 
     strings = backtrace_symbols(buffer, nptrs);
+    fprintf(stderr, "remove ram\n");
     for ( j = 0; j < nptrs; j ++)
         fprintf(stderr, "%s\n", strings[j]);
 
