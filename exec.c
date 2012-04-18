@@ -2994,14 +2994,12 @@ void *qemu_safe_ram_ptr(ram_addr_t addr)
 
     fprintf(stderr, "\n");
     QLIST_FOREACH(block, &ram_list.blocks, next) {
-        fprintf(stderr, "walk through table %lx[%lx]\n", block->offset, block->length);
         if (addr - block->offset < block->length) {
             return block->host + (addr - block->offset);
         }
     }
 
     fprintf(stderr, "Bad ram offset %" PRIx64 "\n", (uint64_t)addr);
-    fprintf(stderr, "Bad ram offset %lx\n", (uint64_t)addr);
     nptrs = backtrace(buffer, 10);
 
     strings = backtrace_symbols(buffer, nptrs);
