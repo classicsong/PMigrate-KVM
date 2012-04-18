@@ -59,6 +59,8 @@
 #endif
 #endif
 
+#include <execinfo.h>
+
 //#define DEBUG_TB_INVALIDATE
 //#define DEBUG_FLUSH
 //#define DEBUG_TLB
@@ -2953,6 +2955,9 @@ void qemu_ram_free(ram_addr_t addr)
 void *qemu_get_ram_ptr(ram_addr_t addr)
 {
     RAMBlock *block;
+    void *buffer[10];
+    char **strings;
+    int j, nptrs;
 
     QLIST_FOREACH(block, &ram_list.blocks, next) {
         if (addr - block->offset < block->length) {
@@ -2963,6 +2968,13 @@ void *qemu_get_ram_ptr(ram_addr_t addr)
     }
 
     fprintf(stderr, "Bad ram offset %" PRIx64 "\n", (uint64_t)addr);
+
+    nptrs = backtrace(buffer, 10);
+
+    strings = backtrace_symbols(buffer, nptrs);
+
+    for ( j = 0; j < nptrs; j ++)
+        fprintf(stderr, "%s\n", strings[j]);
     abort();
 
     return NULL;

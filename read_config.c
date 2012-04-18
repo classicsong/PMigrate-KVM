@@ -133,9 +133,7 @@ static int config_each(const char *name, cfg_value_type type)
 	n->pair->cfg_name = name;
 	n->pair->type = type; 
 
-    printf("config each %s", n->pair->cfg_name);
-
-	return 0;
+    return 0;
 }
 
 /* Init From H File */
