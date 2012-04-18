@@ -460,7 +460,7 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
         qemu_put_be64(f, ram_bytes_total() | RAM_SAVE_FLAG_MEM_SIZE);
 
         QLIST_FOREACH(block, &ram_list.blocks, next) {
-            DPRINTF("Put mem block %s, size %lx\n", block->idstr, block->length);
+            DPRINTF("Put mem block %s, size %lx[%lx]\n", block->idstr, block->offset, block->length);
             qemu_put_byte(f, strlen(block->idstr));
             qemu_put_buffer(f, (uint8_t *)block->idstr, strlen(block->idstr));
             qemu_put_be64(f, block->length);
