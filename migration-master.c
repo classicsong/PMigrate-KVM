@@ -130,7 +130,7 @@ host_memory_master(void *data) {
             s->mem_task_queue->sent_this_iter += s->mem_task_queue->slave_sent[i];
 
         bwidth = qemu_get_clock_ns(rt_clock) - bwidth;
-        DPRINTF("Mem send this iter %lx, bwidth %f\n", s->mem_task_queue->sent_this_iter, bwidth);
+        DPRINTF("Mem send this iter %lx, bwidth %f\n", s->mem_task_queue->sent_this_iter, bwidth/1000000);
         bwidth = s->mem_task_queue->sent_this_iter / bwidth;
 
         data_remaining = ram_bytes_remaining();
@@ -147,7 +147,7 @@ host_memory_master(void *data) {
             /*
              * get lock fill memory info
              */
-            DPRINTF("Iter [%d:%d], memory_remain %ld, bwidth %f\n", 
+            DPRINTF("Iter [%d:%d], memory_remain %lx, bwidth %f\n", 
                     s->mem_task_queue->iter_num, iter_num,
                     data_remaining, bwidth);
             pthread_mutex_unlock(&s->sender_barr->master_lock);
@@ -341,7 +341,7 @@ host_disk_master(void * data) {
          *                             and blocks have bee read but not sent
          */
         data_remaining = get_remaining_dirty_master() + blk_read_remaining();
-        DPRINTF("The data_remaining %lx; %lx\n", get_remaining_dirty_master(), data_remaining); 
+        DPRINTF("Disk data_remaining %lx; %lx\n", get_remaining_dirty_master(), data_remaining); 
 
         total_sent += s->disk_task_queue->sent_this_iter;
 
@@ -376,7 +376,7 @@ host_disk_master(void * data) {
             sent_this_iter = s->mem_task_queue->sent_this_iter + s->disk_task_queue->sent_this_iter;
             sent_last_iter = s->mem_task_queue->sent_last_iter + s->disk_task_queue->sent_last_iter;
 
-            DPRINTF("Total Iter [%d:%d], data_remain %ld, bwidth %f\n", s->disk_task_queue->iter_num, iter_num,
+            DPRINTF("Total Iter [%d:%d], data_remain %lx, bwidth %f\n", s->disk_task_queue->iter_num, iter_num,
                     s->mem_task_queue->data_remaining + s->disk_task_queue->data_remaining, 
                     s->mem_task_queue->bwidth + s->disk_task_queue->bwidth);
 
@@ -429,10 +429,14 @@ host_disk_master(void * data) {
     //last iteration
     pthread_barrier_wait(&s->last_barr);
     DPRINTF("ENTER LAST ITER\n");
+    bwidth = qemu_get_clock_ns(rt_clock);
     block_save_iter(QEMU_VM_SECTION_END, s->mon, s->disk_task_queue, s->file);
     
     //wait for slave end
     s->sender_barr->disk_state = BARR_STATE_ITER_TERMINATE;
+    bwidth = qemu_get_clock_ns(rt_clock) - bwidth;
+    DPRINTF("Disk send last iter %lx, bwidth %f\n", s->disk_task_queue->sent_this_iter, 
+            (bwidth/1000000));
     pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
         
     //last iteration end

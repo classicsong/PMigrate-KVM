@@ -291,7 +291,7 @@ ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
         }
         qemu_put_byte(f, *p);
 
-	return 0;
+        return 1;
     } else {
         qemu_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | RAM_SAVE_FLAG_PAGE | (mem_vnum << MEM_VNUM_OFFSET));
         if (block) {
@@ -301,7 +301,7 @@ ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
         }
         qemu_put_buffer(f, p, TARGET_PAGE_SIZE);
 
-	return TARGET_PAGE_SIZE;
+        return TARGET_PAGE_SIZE;
     }
 }
 

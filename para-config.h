@@ -24,6 +24,7 @@ struct parallel_param {
     int max_iter;
     int max_factor;
 	int max_downtime;
+    unsigned long default_throughput;
 };
 
 extern struct parallel_param *parse_file(const char *file);

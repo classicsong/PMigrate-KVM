@@ -64,6 +64,7 @@ default_config(const char *host_port) {
     para_config->num_slaves = 1;
     para_config->dest_ip_list = dest;  //only init the dest ip
     para_config->host_ip_list = NULL;
+    para_config->default_throughput = 1024 * 1024 * 1024;
 
     return para_config;
 }

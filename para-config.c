@@ -59,6 +59,7 @@ static int get_multi_ip(const char *name, cfg_list *list, struct ip_list **ip, c
 struct parallel_param *parse_file(const char *file) {
     struct parallel_param *para_config;
 	cfg_list *list = NULL;
+    int throughput_in_MB;
 
 	init_config();
 	read_cfg_file(file, &list);
@@ -101,7 +102,14 @@ struct parallel_param *parse_file(const char *file) {
 	if (get_one_num("max_downtime", list, &para_config->max_downtime, "max_downtime error") < 0)
 		goto error;
 
+    // Throughput
+    if (get_one_num("throughput", list, &throughput_in_MB, "default_throughput error") < 0)
+        goto error;
+
+    para_config->default_throughput = throughput_in_MB;
     reveal_param(para_config);
+
+    para_config->default_throughput = para_config->default_throughput * 8 * 1024 * 1024; //convert MB to Bit
     return para_config;
 error:
 	free(para_config);

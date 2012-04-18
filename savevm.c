@@ -1335,7 +1335,6 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
     VMStateField *field = vmsd->fields;
     int ret;
 
-    fprintf(stderr, "vmstate_load new style %s\n", field->name);
     if (version_id > vmsd->version_id) {
         return -EINVAL;
     }
@@ -2028,7 +2027,6 @@ int qemu_loadvm_state(QEMUFile *f)
             le->version_id = version_id;
             QLIST_INSERT_HEAD(&loadvm_handlers, le, entry);
 
-            DPRINTF("get se %s\n", idstr);
             ret = vmstate_load(f, se, le->version_id);
             if (ret < 0) {
                 fprintf(stderr, "qemu: warning: error while loading state for instance 0x%x of device '%s'\n",
