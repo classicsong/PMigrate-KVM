@@ -313,7 +313,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
 
     current_addr = block->offset + offset;
 
-    DPRINTF("Start ram_save_block_master %d\n", DEFAULT_MEM_BATCH_LEN);
+    //DPRINTF("Start ram_save_block_master %d\n", DEFAULT_MEM_BATCH_LEN);
     do {
         if (cpu_physical_memory_get_dirty(current_addr, MIGRATION_DIRTY_FLAG)) {
             uint8_t *p;

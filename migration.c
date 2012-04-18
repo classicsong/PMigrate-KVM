@@ -453,6 +453,7 @@ migrate_fd_put(void *opaque) {
         state = MIG_STATE_COMPLETED;
     }
 
+    pthread_barrier_wait(&s->last_barr);
     if (migrate_fd_cleanup(s) < 0) {
         if (old_vm_running) {
             vm_start();
@@ -460,7 +461,6 @@ migrate_fd_put(void *opaque) {
         state = MIG_STATE_ERROR;
     }
     s->state = state;
-    pthread_barrier_wait(&s->last_barr);
 
     notifier_list_notify(&migration_state_notifiers);
     print_time();

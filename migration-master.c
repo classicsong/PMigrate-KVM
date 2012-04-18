@@ -372,7 +372,7 @@ host_disk_master(void * data) {
                     s->mem_task_queue->data_remaining + s->disk_task_queue->data_remaining, 
                     s->mem_task_queue->bwidth + s->disk_task_queue->bwidth);
 
-            DPRINTF("Sent this iter %ld, sent last iter %ld, expect downtime %ld ns\n", 
+            DPRINTF("Sent this iter %lx, sent last iter %lx, expect downtime %ld ns\n", 
                     sent_this_iter, sent_last_iter, total_expected_downtime);
 
             if (total_expected_downtime < s->para_config->max_downtime ||
