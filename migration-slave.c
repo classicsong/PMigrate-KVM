@@ -112,8 +112,8 @@ tcp_start_outgoing_migration_slave(Monitor *mon,
     return s;
 }
 
-extern void disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f);
-extern void ram_save_block_slave(unsigned offset, uint8_t *p, void *block_p,
+extern unsigned long disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f);
+extern unsigned long ram_save_block_slave(unsigned offset, uint8_t *p, void *block_p,
                                  struct FdMigrationStateSlave *s, int mem_vnum);
 void *
 start_host_slave(void *data) {
@@ -202,8 +202,8 @@ start_host_slave(void *data) {
              */
             for (i = 0; i < body->len; i++) {
                 s->disk_task_queue->slave_sent[s->id] += 
-		  disk_save_block_slave(body->blocks[i].ptr, 
-					body->iter_num, s->file);
+                    disk_save_block_slave(body->blocks[i].ptr, 
+                                          body->iter_num, s->file);
             }
 
             /* End of the single task */
