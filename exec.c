@@ -2994,8 +2994,9 @@ void *qemu_get_ram_ptr(ram_addr_t addr)
 
     QLIST_FOREACH(block, &ram_list.blocks, next) {
         if (addr - block->offset < block->length) {
-            QLIST_REMOVE(block, next);
-            QLIST_INSERT_HEAD(&ram_list.blocks, block, next);
+            //classicsong remove this
+            //QLIST_REMOVE(block, next);
+            //QLIST_INSERT_HEAD(&ram_list.blocks, block, next);
             return block->host + (addr - block->offset);
         }
     }
