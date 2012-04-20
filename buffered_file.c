@@ -171,8 +171,6 @@ static int buffered_put_buffer_slave(void *opaque, const uint8_t *buf, int64_t p
     if (s->budget < 0) {
         s->burst_time_us = 10000; //RATE_TO_BTU / s->xfer_limit;
 
-        fprintf(stderr, "xfer_limit %ld\n", s->xfer_limit);
-
         if (s->last_put.tv_sec == 0) {
             s->budget += s->xfer_limit;
             gettimeofday(&s->last_put, NULL);
