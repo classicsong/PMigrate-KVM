@@ -122,6 +122,7 @@ init_migr_barrier(struct migration_barrier *barr, int num_slaves) {
 }
 
 static struct migration_task_queue * new_task_queue(void) {
+    int i;
     struct migration_task_queue *task_queue = (struct migration_task_queue *)malloc(sizeof(struct migration_task_queue));
     INIT_LIST_HEAD(&(task_queue->list_head));
     pthread_mutex_init(&(task_queue->task_lock), NULL);
@@ -133,6 +134,8 @@ static struct migration_task_queue * new_task_queue(void) {
     task_queue->sent_this_iter = 0;
     task_queue->sent_last_iter = 0;
     task_queue->task_pending = 0;
+    for ( i = 0; i < 32; i++ )
+        task_queue->slave_sent[i] = 0;
 
     return task_queue;
 }

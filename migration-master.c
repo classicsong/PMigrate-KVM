@@ -126,8 +126,11 @@ host_memory_master(void *data) {
             return 0;
         }
 
-        for ( i = 0; i < s->para_config->num_slaves; i++)
+        s->mem_task_queue->sent_this_iter = 0;
+        for ( i = 0; i < s->para_config->num_slaves; i++) {
             s->mem_task_queue->sent_this_iter += s->mem_task_queue->slave_sent[i];
+            s->mem_task_queue->slave_sent[i] = 0;
+        }
 
         bwidth = qemu_get_clock_ns(rt_clock) - bwidth;
         DPRINTF("Mem send this iter %lx, bwidth %f\n", s->mem_task_queue->sent_this_iter, bwidth/1000000);
@@ -328,8 +331,11 @@ host_disk_master(void * data) {
          */
         blk_mig_reset_dirty_cursor_master();
 
-        for ( i = 0; i < s->para_config->num_slaves; i++)
+        s->disk_task_queue->sent_this_iter = 0;
+        for ( i = 0; i < s->para_config->num_slaves; i++) {
             s->disk_task_queue->sent_this_iter += s->disk_task_queue->slave_sent[i];
+            s->disk_task_queue->slave_sent[i] = 0;
+        }
 
         bwidth = qemu_get_clock_ns(rt_clock) - bwidth;
         DPRINTF("Disk send this iter %lx, bwidth %f\n", s->disk_task_queue->sent_this_iter, 

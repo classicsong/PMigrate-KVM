@@ -215,8 +215,8 @@ start_host_slave(void *data) {
             qemu_put_be32(f, s->mem_task_queue->section_id);
             for (i = 0; i < body->len; i++) {
                 s->mem_task_queue->slave_sent[s->id] += 
-		  ram_save_block_slave(body->pages[i].addr, body->pages[i].ptr, 
-				       body->pages[i].block, s, s->mem_task_queue->iter_num);
+                    ram_save_block_slave(body->pages[i].addr, body->pages[i].ptr, 
+                                         body->pages[i].block, s, s->mem_task_queue->iter_num);
             }
 
             /* End of the single task */
