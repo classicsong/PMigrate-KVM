@@ -225,7 +225,7 @@ host_memory_master(void *data) {
     pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
     //last iteration end
     pthread_barrier_wait(&s->last_barr);
-    DPRINTF("last iteration time %f\n", (qemu_get_clock_ns(rt_clock) - bwidth)/100000);
+    DPRINTF("last iteration time %f\n", (qemu_get_clock_ns(rt_clock) - bwidth)/1000000);
 
     DPRINTF("Mem master end\n");
     return NULL;

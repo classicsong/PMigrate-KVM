@@ -905,7 +905,6 @@ mig_save_device_dirty_sync(Monitor *mon, QEMUFile *f,
             /*
              * classicsong create task
              */
-            DPRINTF("add dirty block in %s:%d\n", blk->bmds->bs->device_name, body->len);
             body->blocks[body->len++].ptr = blk;
 
             bdrv_reset_dirty(bmds->bs, sector, nr_sectors);
