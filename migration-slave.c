@@ -137,7 +137,7 @@ start_host_slave(void *data) {
         return NULL;
     }
 
-    DPRINTF("Start host slave, begin creating connection, %s\n", s->dest_ip);
+    DPRINTF("Start host slave, begin creating connection, %s, %d\n", s->dest_ip, s->bandwidth_limit);
     /*
      * create network connection
      */
