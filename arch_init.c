@@ -331,7 +331,7 @@ ram_save_block_master(struct migration_task_queue *task_queue) {
                 cont = 0;
             }
 
-            DPRINTF("reset dirty %lx, %lx\n", current_addr, block->offset);
+            //DPRINTF("reset dirty %lx, %lx\n", current_addr, block->offset);
             cpu_physical_memory_reset_dirty(current_addr,
                                             current_addr + TARGET_PAGE_SIZE,
                                             MIGRATION_DIRTY_FLAG);
