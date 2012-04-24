@@ -8,7 +8,7 @@
 #include "buffered_file.h"
 #include "block.h"
 
-#define MULTI_TRY 1000
+#define MULTI_TRY 100
 
 #define DEBUG_MIGRATION_SLAVE
 
@@ -122,7 +122,7 @@ start_host_slave(void *data) {
     struct sockaddr_in addr;
     int i, ret;
     QEMUFile *f;
-    struct timespec slave_sleep = {0, 100000};
+    struct timespec slave_sleep = {0, 1000000};
     unsigned long data_sent;
     
     if (parse_host_port(&addr, s->dest_ip) < 0) {
