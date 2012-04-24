@@ -134,7 +134,7 @@ start_host_slave(void *data) {
     /*
      * create network connection
      */
-    s->fd = qemu_socket(PF_INET, SOCK_STREAM, 0);
+    s->fd = qemu_socket(AF_INET, SOCK_STREAM, 0);
     if (s->fd == -1) {
         fprintf(stderr, "error creating socket\n");
         qemu_free(s);
@@ -323,14 +323,14 @@ void *start_dest_slave(void *data) {
     /*
      * create connection
      */
-    fd = qemu_socket(PF_INET, SOCK_STREAM, 0);
+    fd = qemu_socket(AF_INET, SOCK_STREAM, 0);
     if (fd == -1) {
         fprintf(stderr, "socket error %d\n", socket_error());
         return NULL;
     }
 
     val = 1;
-    //setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&val, sizeof(val));
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&val, sizeof(val));
 
     if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
         goto err;
