@@ -330,7 +330,7 @@ void *start_dest_slave(void *data) {
     }
 
     val = 1;
-    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&val, sizeof(val));
+    //setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&val, sizeof(val));
 
     if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
         goto err;
