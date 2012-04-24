@@ -8,7 +8,7 @@
 #include "buffered_file.h"
 #include "block.h"
 
-#define MULTI_TRY 1
+#define MULTI_TRY 1000
 
 #define DEBUG_MIGRATION_SLAVE
 
