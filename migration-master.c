@@ -436,6 +436,8 @@ host_disk_master(void * data) {
     pthread_barrier_wait(&s->last_barr);
     DPRINTF("ENTER LAST ITER\n");
     bwidth = qemu_get_clock_ns(rt_clock);
+    blk_mig_reset_dirty_cursor_master();
+
     block_save_iter(QEMU_VM_SECTION_END, s->mon, s->disk_task_queue, s->file);
     
     //wait for slave end

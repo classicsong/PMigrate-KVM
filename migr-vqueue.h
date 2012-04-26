@@ -11,7 +11,6 @@ static inline uint32_t atomic_compare_exchange32(volatile uint32_t *p, uint32_t 
     return out;
 }
 
-
 static int
 hold_page(volatile uint32_t *v_p, uint32_t old_vnum, uint32_t new_vnum) {
 

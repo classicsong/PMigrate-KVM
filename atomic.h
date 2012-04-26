@@ -11,7 +11,7 @@ typedef struct {
  *       */
 static inline void atomic_add(int i, atomic_t *v)
 {
-		asm volatile(LOCK_PREFIX "addl %1,%0"
+    asm volatile("lock" "addl %1,%0"
 						     : "+m" (v->counter)
 									     : "ir" (i));
 }
@@ -29,7 +29,7 @@ static inline int atomic_sub_and_test(int i, atomic_t *v)
 {
 		unsigned char c;
 
-			asm volatile(LOCK_PREFIX "subl %2,%0; sete %1"
+        asm volatile("lock" "subl %2,%0; sete %1"
 							     : "+m" (v->counter), "=qm" (c)
 										     : "ir" (i) : "memory");
 				return c;
@@ -43,6 +43,50 @@ static inline int atomic_sub_and_test(int i, atomic_t *v)
  *      */
 static inline void atomic_inc(atomic_t *v)
 {
-		asm volatile(LOCK_PREFIX "incl %0"
+		asm volatile("lock" "incl %0"
 						     : "+m" (v->counter));
+}
+
+#define SPIN_LOCK_UNLOCKED 0
+#define ADDR (*(volatile long *) addr)
+
+/**
+ * test_and_set_bit - Set a bit and return its old value
+ * @nr: Bit to set
+ * @addr: Address to count from
+ *
+ * This operation is atomic and cannot be reordered.
+ * It also implies a memory barrier.
+ */
+static inline int test_and_set_bit(int nr, volatile void *addr)
+{
+    int oldbit;
+
+    asm volatile (
+        "btsl %2,%1\n\tsbbl %0,%0"
+        : "=r" (oldbit), "=m" (ADDR)
+        : "Ir" (nr), "m" (ADDR) : "memory");
+    return oldbit;
+}
+
+typedef int spinlock_t;
+
+static inline void spin_lock(spinlock_t *lock)
+{
+    while ( test_and_set_bit(1, lock) );
+}
+
+static inline void spin_lock_init(spinlock_t *lock)
+{
+    *lock = SPIN_LOCK_UNLOCKED;
+}
+
+static inline void spin_unlock(spinlock_t *lock)
+{
+    *lock = SPIN_LOCK_UNLOCKED;
+}
+
+static inline int spin_trylock(spinlock_t *lock)
+{
+    return !test_and_set_bit(1, lock);
 }
