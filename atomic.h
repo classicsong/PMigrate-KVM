@@ -48,7 +48,8 @@ static inline void atomic_inc(atomic_t *v)
 }
 
 #define SPIN_LOCK_UNLOCKED 0
-#define ADDR (*(volatile long *) addr)
+
+#define ADDR (*(volatile int *) addr)
 
 /**
  * test_and_set_bit - Set a bit and return its old value

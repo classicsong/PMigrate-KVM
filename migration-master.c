@@ -156,7 +156,7 @@ host_memory_master(void *data) {
             pthread_mutex_unlock(&s->sender_barr->master_lock);
         }
         else {
-            int total_expected_downtime;
+            uint64_t total_expected_downtime;
             uint64_t sent_this_iter;
             uint64_t sent_last_iter;
             /*
@@ -174,7 +174,8 @@ host_memory_master(void *data) {
                     s->mem_task_queue->data_remaining + s->disk_task_queue->data_remaining, 
                     s->mem_task_queue->bwidth + s->disk_task_queue->bwidth);
 
-            DPRINTF("Sent this iter %lx, sent last iter %lx", sent_this_iter, sent_last_iter);
+            DPRINTF("Sent this iter %lx, sent last iter %lx, expect downtime %ld ns\n", 
+                    sent_this_iter, sent_last_iter, total_expected_downtime);
 
             if (total_expected_downtime < s->para_config->max_downtime ||
                 sent_this_iter > sent_last_iter ||
@@ -440,6 +441,11 @@ host_disk_master(void * data) {
 
     block_save_iter(QEMU_VM_SECTION_END, s->mon, s->disk_task_queue, s->file);
     
+    s->disk_task_queue->sent_this_iter = 0;
+    for ( i = 0; i < s->para_config->num_slaves; i++) {
+        s->disk_task_queue->sent_this_iter += s->disk_task_queue->slave_sent[i];
+    }
+
     //wait for slave end
     s->sender_barr->disk_state = BARR_STATE_ITER_TERMINATE;
     bwidth = qemu_get_clock_ns(rt_clock) - bwidth;

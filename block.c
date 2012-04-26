@@ -934,7 +934,7 @@ int bdrv_read(BlockDriverState *bs, int64_t sector_num,
 
 #include "atomic.h"
 
-static spinlock_t block_dirty_lock = 0;
+static spinlock_t block_dirty_lock = SPIN_LOCK_UNLOCKED;
 
 static void set_dirty_bitmap(BlockDriverState *bs, int64_t sector_num,
                              int nb_sectors, int dirty)
