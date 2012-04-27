@@ -222,6 +222,13 @@ host_memory_master(void *data) {
     //last iteration
     pthread_barrier_wait(&s->last_barr);
     bwidth = qemu_get_clock_ns(rt_clock);
+    //need to resync dirty after the VM is paused
+    if (cpu_physical_sync_dirty_bitmap(0, TARGET_PHYS_ADDR_MAX) != 0) {
+        fprintf(stderr, "get dirty bitmap error\n");
+        qemu_file_set_error(f);
+        return 0;
+    }
+
     ram_save_iter(QEMU_VM_SECTION_END, s->mem_task_queue, s->file);
 
     //wait for slave end
