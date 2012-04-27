@@ -511,6 +511,7 @@ dest_disk_master(void *data) {
                     fprintf(stderr, "end disk write %lx\n", total_disk_write/1000000);
                     return;
                 }
+                DPRINTF("disk iteration end\n");
                 atomic_set(&banner->slave_done, 0);
                 pthread_barrier_wait(&banner->end_barrier);
             }

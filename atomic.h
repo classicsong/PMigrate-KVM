@@ -80,7 +80,7 @@ static inline int test_and_set_bit(int nr, volatile void *addr)
     return oldbit;
 }
 
-typedef int disk_spinlock_t;
+typedef volatile int disk_spinlock_t;
 
 static inline void disk_spin_lock(disk_spinlock_t *lock)
 {
