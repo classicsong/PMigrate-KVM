@@ -1179,8 +1179,14 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
             }
             */
             task = (struct disk_task *)malloc(sizeof(struct disk_task));
+            task->bs = bs;
+            task->addr = addr;
+            task->buf = buf;
+            task->nr_sectors = nr_sectors;
             while (reduce_q->task_pending > MAX_TASK_PENDING) 
                 nanosleep(&sleep, NULL);
+
+            fprintf(stderr, "get task %lx\n", addr);
             queue_push_task(reduce_q, task);
             /*
              * now we release the block

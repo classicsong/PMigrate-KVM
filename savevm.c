@@ -2086,6 +2086,7 @@ int qemu_loadvm_state(QEMUFile *f)
             pthread_barrier_init(&disk_banner->end_barrier, NULL, num_slaves + 1);
             pthread_barrier_init(&end_barrier, NULL, num_slaves + 1);
             atomic_set(&disk_banner->slave_done, 0);
+            disk_banner->end = 0;
             
             create_dest_disk_master(num_slaves, disk_banner);
             /*

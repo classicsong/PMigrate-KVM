@@ -500,6 +500,8 @@ dest_disk_master(void *data) {
     int nr_slaves = reduce_q->nr_slaves;
     struct banner *banner = (struct banner *)data;
 
+    DPRINTF("disk master inited\n");
+
     while (1) {
         while (queue_pop_task(reduce_q, &task_p) < 0) {
             if (atomic_read(&banner->slave_done) < nr_slaves)
@@ -514,6 +516,7 @@ dest_disk_master(void *data) {
             }
         } 
           
+        DPRINTF("get task %lx\n", task->addr);
         task = (struct disk_task *)task_p;
         disk_write(task->bs, task->addr, task->buf, task->nr_sectors);
         free(task);
