@@ -1186,7 +1186,6 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
             while (reduce_q->task_pending > MAX_TASK_PENDING) 
                 nanosleep(&sleep, NULL);
 
-            fprintf(stderr, "get task %lx\n", addr);
             queue_push_task(reduce_q, task);
             /*
              * now we release the block

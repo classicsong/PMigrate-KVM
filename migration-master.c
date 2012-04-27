@@ -517,7 +517,6 @@ dest_disk_master(void *data) {
         } 
           
         task = (struct disk_task *)task_p;
-        DPRINTF("get task %lx\n", task->addr);
         disk_write(task->bs, task->addr, task->buf, task->nr_sectors);
         free(task);
     }
