@@ -311,7 +311,6 @@ struct dest_slave_para{
 //}
 
 extern void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers, struct banner *banner, int fd);
-extern __thread unsigned long total_disk_write;
 
 void *start_dest_slave(void *data) {
     struct dest_slave_para * para = (struct dest_slave_para *)data;
@@ -383,7 +382,6 @@ void *start_dest_slave(void *data) {
      */
     slave_process_incoming_migration(f, para->handlers, para->banner, con_fd);
 
-    DPRINTF("Dest slave wait to end %lx\n", total_disk_write/1000000);
     pthread_barrier_wait(para->end_barrier);    
     DPRINTF("Dest slave end\n");
     //slave_loadvm_state();

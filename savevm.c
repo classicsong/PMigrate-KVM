@@ -1948,6 +1948,8 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
         }
     }
 
+    atomic_inc(&banner->slave_done);
+    banner->end = 1;
  out:
     return;
 }

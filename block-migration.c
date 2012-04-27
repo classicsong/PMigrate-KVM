@@ -1061,7 +1061,7 @@ static int block_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
     //return ((stage == 2) && is_stage2_completed());
 }
 
-__thread unsigned long total_disk_write = 0UL;
+unsigned long total_disk_write = 0UL;
 extern struct migration_task_queue *reduce_q;
 
 int disk_write(void *bs_p, int64_t addr, void *buf_p, int nr_sectors);

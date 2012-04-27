@@ -489,7 +489,9 @@ struct migration_task_queue *reduce_q;
 
 extern int disk_write(void *bs_p, int64_t addr, void *buf_p, int nr_sectors);
 
+extern unsigned long total_disk_write;
 void *dest_disk_master(void *data);
+
 void *
 dest_disk_master(void *data) {
     void *task_p;
@@ -498,17 +500,23 @@ dest_disk_master(void *data) {
     int nr_slaves = reduce_q->nr_slaves;
     struct banner *banner = (struct banner *)data;
 
-    if (queue_pop_task(reduce_q, &task_p) > 0) {
+    while (1) {
+        while (queue_pop_task(reduce_q, &task_p) < 0) {
+            if (atomic_read(&banner->slave_done) < nr_slaves)
+                nanosleep(&master_sleep, NULL);
+            else {
+                if (banner->end) {
+                    fprintf(stderr, "end disk write %lx\n", total_disk_write/1000000);
+                    return;
+                }
+                atomic_set(&banner->slave_done, 0);
+                pthread_barrier_wait(&banner->end_barrier);
+            }
+        } 
+          
         task = (struct disk_task *)task_p;
         disk_write(task->bs, task->addr, task->buf, task->nr_sectors);
         free(task);
-    } else {
-        if (atomic_read(&banner->slave_done) < nr_slaves)
-            nanosleep(&master_sleep, NULL);
-        else {
-            atomic_set(&banner->slave_done, 0);
-            pthread_barrier_wait(&banner->end_barrier);
-        }
     }
 }
 

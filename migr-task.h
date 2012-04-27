@@ -103,6 +103,7 @@ struct disk_task {
 struct banner {
     pthread_barrier_t end_barrier;
     atomic_t slave_done;
+    volatile int end;
 };
 
 struct migration_task_queue {
