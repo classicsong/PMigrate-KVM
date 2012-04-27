@@ -1942,10 +1942,9 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
             break;
         case QEMU_VM_ITER_END:
             atomic_inc(&banner->slave_done);
-            fprintf(stderr, "receive end\n");
+            fprintf(stderr, "receive end %d\n", fd);
             pthread_barrier_wait(&banner->end_barrier);
             write(fd, "OK", sizeof("OK"));
-            fflush(fd);
             fprintf(stderr, "after write\n");
             break;
         }

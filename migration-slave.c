@@ -353,7 +353,7 @@ void *start_dest_slave(void *data) {
     /*
      * wait for further commands
      */
-    DPRINTF("accepted migration\n");
+    DPRINTF("accepted migration %d\n", con_fd);
 
     if (con_fd == -1) {
         fprintf(stderr, "could not accept migration connection\n");
