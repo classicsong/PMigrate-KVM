@@ -1117,6 +1117,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
             //uint32_t curr_vnum;
             //volatile uint32_t *vnum_p;
             struct disk_task *task;
+            struct timespec sleep = {0, 10000000}; //sleep 10ms
 
             /* get device name */
             len = qemu_get_byte(f);
@@ -1178,6 +1179,8 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
             }
             */
             task = (struct disk_task *)malloc(sizeof(struct disk_task));
+            while (reduce_q->task_pending > MAX_TASK_PENDING) 
+                nanosleep(&sleep, NULL);
             queue_push_task(reduce_q, task);
             /*
              * now we release the block
