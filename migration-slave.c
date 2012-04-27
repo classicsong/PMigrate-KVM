@@ -65,7 +65,7 @@ static int tcp_close_slave(FdMigrationStateSlave *s)
 #define QEMU_VM_SECTION_END          0x03
 #define QEMU_VM_SECTION_FULL         0x04
 #define QEMU_VM_SUBSECTION           0x05
-
+#define QEMU_VM_ITER_END             0x07
 //borrowed from block-migration.c
 #define BLK_MIG_FLAG_EOS                0x02
 
@@ -130,7 +130,7 @@ start_host_slave(void *data) {
         return NULL;
     }
 
-    DPRINTF("Start host slave, begin creating connection, %s, %d\n", s->dest_ip, s->bandwidth_limit);
+    DPRINTF("Start host slave, begin creating connection, %s, %ld\n", s->dest_ip, s->bandwidth_limit);
     /*
      * create network connection
      */
@@ -182,8 +182,10 @@ start_host_slave(void *data) {
      * So the effect of sending memory first and sending disk first is same.
      */
     while (1) {
+        void *body_p;
         /* check for disk */
-        if (queue_pop_task(s->disk_task_queue, &body) > 0) {
+        if (queue_pop_task(s->disk_task_queue, &body_p) > 0) {
+            body = (struct task_body *)body_p;
             //DPRINTF("get disk task, %d, section id %d\n", s->mem_task_queue->iter_num,
             //        s->mem_task_queue->section_id);
 
@@ -206,7 +208,8 @@ start_host_slave(void *data) {
             free(body);
         }
         /* check for memory */
-        else if (queue_pop_task(s->mem_task_queue, &body) > 0) {
+        else if (queue_pop_task(s->mem_task_queue, &body_p) > 0) {
+            body = (struct task_body *)body_p;
             //DPRINTF("get mem task, %lx: %p, %d, section id %d\n", body->pages[0].addr, 
             //       body->pages[0].ptr, 
             //       s->mem_task_queue->iter_num, s->mem_task_queue->section_id);
@@ -229,7 +232,12 @@ start_host_slave(void *data) {
         else {
             if (s->sender_barr->mem_state == BARR_STATE_ITER_END && 
                 s->sender_barr->disk_state == BARR_STATE_ITER_END) {
+                char buf[4];
+                int rret;
                 DPRINTF("Iteration End fall into barriers\n");
+                qemu_put_byte(f, QEMU_VM_ITER_END);
+                qemu_fflush(f);
+                rret = read(s->fd, buf, sizeof("OK"));
                 pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
                 pthread_barrier_wait(&s->sender_barr->next_iter_barr);
             }
@@ -240,7 +248,7 @@ start_host_slave(void *data) {
                 qemu_fflush(f);
                 pthread_barrier_wait(&s->sender_barr->sender_iter_barr);
 
-		data_sent = 0;
+                data_sent = 0;
                 break;
             }
 
@@ -291,6 +299,7 @@ struct dest_slave_para{
     char *listen_ip;
     int ssl_type;
     void *handlers;
+    struct banner *banner;
     pthread_barrier_t *end_barrier;
 };
 
@@ -301,7 +310,7 @@ struct dest_slave_para{
 //    return -1;
 //}
 
-extern void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers);
+extern void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers, struct banner *banner, int fd);
 extern __thread unsigned long total_disk_write;
 
 void *start_dest_slave(void *data) {
@@ -372,7 +381,7 @@ void *start_dest_slave(void *data) {
     /*
      * slave handle incoming data
      */
-    slave_process_incoming_migration(f, para->handlers);
+    slave_process_incoming_migration(f, para->handlers, para->banner, con_fd);
 
     DPRINTF("Dest slave wait to end %lx\n", total_disk_write/1000000);
     pthread_barrier_wait(para->end_barrier);    
@@ -387,9 +396,11 @@ void *start_dest_slave(void *data) {
     free(para);
     return NULL;
 }
-pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers, pthread_barrier_t *end_barrier);
+pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers, 
+                            struct banner *banner, pthread_barrier_t *end_barrier);
 
-pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers, pthread_barrier_t *end_barrier) {
+pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers, 
+                            struct banner *banner, pthread_barrier_t *end_barrier) {
     struct dest_slave_para *data = (struct dest_slave_para *)malloc(sizeof(struct dest_slave_para));
     pthread_t tid;
 
@@ -398,6 +409,7 @@ pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers
     data->listen_ip = listen_ip;
     data->ssl_type = ssl_type;
     data->handlers = loadvm_handlers;
+    data->banner = banner;
     data->end_barrier = end_barrier;
     pthread_create(&tid, NULL, start_dest_slave, data);
 

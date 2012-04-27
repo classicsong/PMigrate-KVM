@@ -1062,6 +1062,24 @@ static int block_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque)
 }
 
 __thread unsigned long total_disk_write = 0UL;
+extern struct migration_task_queue *reduce_q;
+
+int disk_write(void *bs_p, int64_t addr, void *buf_p, int nr_sectors);
+int 
+disk_write(void *bs_p, int64_t addr, void *buf_p, int nr_sectors) {
+    BlockDriverState *bs = bs_p;
+    uint8_t *buf = buf_p;
+    int ret;
+    unsigned long time_delta;
+
+    time_delta = qemu_get_clock_ns(rt_clock);
+    ret = bdrv_write(bs, addr, buf, nr_sectors);
+    total_disk_write += (qemu_get_clock_ns(rt_clock) - time_delta);
+
+    qemu_free(buf);
+
+    return ret;
+};
 
 static int block_load(QEMUFile *f, void *opaque, int version_id)
 {
@@ -1069,12 +1087,11 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
     int len, flags;
     char device_name[256];
     int64_t addr;
-    BlockDriverState *bs, *bs_prev = NULL;
+    BlockDriverState *bs = NULL;
     uint8_t *buf;
     int64_t total_sectors = 0;
     int nr_sectors;
     int iter_num;
-    unsigned long time_delta;
 
     //DPRINTF("Entering block_load\n");
     /*
@@ -1096,10 +1113,10 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
          * only BLK_MIG_FLAG_DEVICE_BLOCK to transfer data
          */
         if (flags & BLK_MIG_FLAG_DEVICE_BLOCK) {
-            int ret;
-            uint32_t disk_vnum = iter_num;
-            uint32_t curr_vnum;
-            volatile uint32_t *vnum_p;
+            //uint32_t disk_vnum = iter_num;
+            //uint32_t curr_vnum;
+            //volatile uint32_t *vnum_p;
+            struct disk_task *task;
 
             /* get device name */
             len = qemu_get_byte(f);
@@ -1113,14 +1130,11 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
                 return -EINVAL;
             }
 
-            if (bs != bs_prev) {
-                bs_prev = bs;
-                total_sectors = bdrv_getlength(bs) >> BDRV_SECTOR_BITS;
-                if (total_sectors <= 0) {
-                    error_report("Error getting length of block device %s\n",
-                                 device_name);
-                    return -EINVAL;
-                }
+            total_sectors = bdrv_getlength(bs) >> BDRV_SECTOR_BITS;
+            if (total_sectors <= 0) {
+                error_report("Error getting length of block device %s\n",
+                             device_name);
+                return -EINVAL;
             }
 
             /*
@@ -1128,7 +1142,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
              * then get block data
              * the block data is sent at host end so we must receive it
              */
-            vnum_p = &(bs->version_queue[addr]);
+            //vnum_p = &(bs->version_queue[addr]);
 	
             if (total_sectors - addr < BDRV_SECTORS_PER_DIRTY_CHUNK) {
                 nr_sectors = total_sectors - addr;
@@ -1140,11 +1154,12 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
 
             qemu_get_buffer(f, buf, BLOCK_SIZE);
 
+            /*
         re_check_nor:
             curr_vnum = *vnum_p;
             /*
              * some one is holding the block
-             */
+             *
             while (curr_vnum % 2 == 1) {
                 curr_vnum = *vnum_p;
             }
@@ -1156,24 +1171,18 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
 
             /*
              * now we will hold the block
-             */
+             *
             if (hold_block(vnum_p, curr_vnum, disk_vnum)) {
-                /* fail holding the page */
+                /* fail holding the page *
                 goto re_check_nor;
             }
-
-            time_delta = qemu_get_clock_ns(rt_clock);
-            ret = bdrv_write(bs, addr, buf, nr_sectors);
-            total_disk_write += (qemu_get_clock_ns(rt_clock) - time_delta);
+            */
+            task = (struct disk_task *)malloc(sizeof(struct disk_task));
+            queue_push_task(reduce_q, task);
             /*
              * now we release the block
              */
-            release_block(vnum_p, disk_vnum);
-
-            qemu_free(buf);
-            if (ret < 0) {
-                return ret;
-            }
+            //release_block(vnum_p, disk_vnum);
         } else if (flags & BLK_MIG_FLAG_PROGRESS) {
             if (!banner_printed) {
                 printf("Receiving block device images\n");

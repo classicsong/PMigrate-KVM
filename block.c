@@ -934,7 +934,7 @@ int bdrv_read(BlockDriverState *bs, int64_t sector_num,
 
 #include "atomic.h"
 
-static spinlock_t block_dirty_lock = SPIN_LOCK_UNLOCKED;
+static disk_spinlock_t block_dirty_lock = SPIN_LOCK_UNLOCKED;
 
 static void set_dirty_bitmap(BlockDriverState *bs, int64_t sector_num,
                              int nb_sectors, int dirty)
@@ -945,7 +945,7 @@ static void set_dirty_bitmap(BlockDriverState *bs, int64_t sector_num,
     start = sector_num / BDRV_SECTORS_PER_DIRTY_CHUNK;
     end = (sector_num + nb_sectors - 1) / BDRV_SECTORS_PER_DIRTY_CHUNK;
 
-    spin_lock(&block_dirty_lock);
+    disk_spin_lock(&block_dirty_lock);
     for (; start <= end; start++) {
         idx = start / (sizeof(unsigned long) * 8);
         bit = start % (sizeof(unsigned long) * 8);
@@ -963,7 +963,7 @@ static void set_dirty_bitmap(BlockDriverState *bs, int64_t sector_num,
         }
         bs->dirty_bitmap[idx] = val;
     }
-    spin_unlock(&block_dirty_lock);
+    disk_spin_unlock(&block_dirty_lock);
 }
 
 /* Return < 0 if error. Important errors are:

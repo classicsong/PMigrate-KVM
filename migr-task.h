@@ -5,6 +5,7 @@
 #include <pthread.h>
 
 #include "block.h"
+#include "atomic.h"
 
 #define SLEEP_SHORT_TIME 1000
 
@@ -89,13 +90,28 @@ struct migration_barrier {
 
 struct migration_task {
     struct linked_list list;
-    struct task_body *body;
+    void *body;
+};
+
+struct disk_task {
+    void *bs;
+    int64_t addr;
+    void *buf;
+    int nr_sectors;
+};
+
+struct banner {
+    pthread_barrier_t end_barrier;
+    atomic_t slave_done;
 };
 
 struct migration_task_queue {
     struct linked_list list_head;
     pthread_mutex_t task_lock;
-    int section_id;
+    union {
+        int section_id;
+        int nr_slaves;
+    };
     int force_end;
     int iter_num;
     unsigned long data_remaining;
@@ -140,7 +156,7 @@ static struct migration_task_queue * new_task_queue(void) {
     return task_queue;
 }
 
-static int queue_pop_task(struct migration_task_queue *task_queue, struct task_body **arg) {
+static int queue_pop_task(struct migration_task_queue *task_queue, void **arg) {
     pthread_mutex_lock(&(task_queue->task_lock));
     if (task_queue->list_head.next == &task_queue->list_head) {
         pthread_mutex_unlock(&(task_queue->task_lock));
@@ -159,7 +175,7 @@ static int queue_pop_task(struct migration_task_queue *task_queue, struct task_b
     return 1;
 }
 
-static int queue_push_task(struct migration_task_queue *task_queue, struct task_body *body) {
+static int queue_push_task(struct migration_task_queue *task_queue, void *body) {
     struct migration_task *task = (struct migration_task *)malloc(sizeof(struct migration_task));
 
     if (task < 0) {

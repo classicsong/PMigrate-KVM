@@ -1488,6 +1488,8 @@ static void vmstate_save(QEMUFile *f, SaveStateEntry *se)
 #define QEMU_VM_SECTION_FULL         0x04
 #define QEMU_VM_SUBSECTION           0x05
 #define QEMU_VM_SECTION_NEGOTIATE    0x06
+#define QEMU_VM_ITER_END             0x07
+
 
 bool qemu_savevm_state_blocked(Monitor *mon)
 {
@@ -1894,11 +1896,12 @@ typedef struct LoadStateEntry {
 
 struct FdMigrationDestState *dest_state;
 typedef QLIST_HEAD(migr_handler, LoadStateEntry) migr_handler;
-
-void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers);
-//classicsong
+                                                 
+void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers, 
+                                      struct banner *banner, int fd);
 void 
-slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers) {
+slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers, 
+                                 struct banner *banner, int fd) {
     LoadStateEntry *le;
     uint8_t section_type;
     uint32_t section_id;
@@ -1937,6 +1940,11 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers) {
                 goto out;
             }
             break;
+        case QEMU_VM_ITER_END:
+            atomic_inc(&banner->slave_done);
+            pthread_barrier_wait(&banner->end_barrier);
+            write(fd, "OK", sizeof("OK"));
+            break;
         }
     }
 
@@ -1945,7 +1953,8 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers) {
 }
 
 extern pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers, 
-                                   pthread_barrier_t *end_barrier);
+                                   struct banner *banner, pthread_barrier_t *end_barrier);
+extern void create_dest_disk_master(int nr_slaves, struct banner *banner);
 
 static struct migration_slave *dest_slave_list = NULL;
 
@@ -1958,6 +1967,7 @@ int qemu_loadvm_state(QEMUFile *f)
     unsigned int v;
     int ret;
     pthread_barrier_t end_barrier;
+    struct banner *disk_banner;
 
     if (qemu_savevm_state_blocked(default_mon)) {
         return -EINVAL;
@@ -2070,7 +2080,12 @@ int qemu_loadvm_state(QEMUFile *f)
              * Init sync point of the end of all end in the dest
              * We have one master and several slaves in the dest
              */
+            disk_banner = (struct banner *)malloc(sizeof(struct banner));
+            pthread_barrier_init(&disk_banner->end_barrier, NULL, num_slaves + 1);
             pthread_barrier_init(&end_barrier, NULL, num_slaves + 1);
+            atomic_set(&disk_banner->slave_done, 0);
+            
+            create_dest_disk_master(num_slaves, disk_banner);
             /*
              * creating dest slaves
              */
@@ -2086,7 +2101,7 @@ int qemu_loadvm_state(QEMUFile *f)
                 qemu_get_buffer(f, ip_buf, len);
                 ip_buf[len] = 0;
                 DPRINTF("get data %s\n", ip_buf);
-                tid = create_dest_slave((char *)ip_buf, ssl_type, &loadvm_handlers, &end_barrier);
+                tid = create_dest_slave((char *)ip_buf, ssl_type, &loadvm_handlers, disk_banner, &end_barrier);
                 struct migration_slave *slave = (struct migration_slave *)malloc(sizeof(struct migration_slave));
                 slave->slave_id = tid;
                 slave->next = dest_slave_list;

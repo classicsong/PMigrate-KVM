@@ -485,6 +485,38 @@ create_host_disk_master(void *opaque) {
     s->master_list = master;
 }
 
-//pthread_t create_dest_memory_master();
+struct migration_task_queue *reduce_q;
 
-//pthread_t create_dest_disk_master();
+extern int disk_write(void *bs_p, int64_t addr, void *buf_p, int nr_sectors);
+
+void *dest_disk_master(void *data);
+void *
+dest_disk_master(void *data) {
+    void *task_p;
+    struct disk_task *task;
+    struct timespec master_sleep = {0, 100000};
+    int nr_slaves = reduce_q->nr_slaves;
+    struct banner *banner = (struct banner *)data;
+
+    if (queue_pop_task(reduce_q, &task_p) > 0) {
+        task = (struct disk_task *)task_p;
+        disk_write(task->bs, task->addr, task->buf, task->nr_sectors);
+        free(task);
+    } else {
+        if (atomic_read(&banner->slave_done) < nr_slaves)
+            nanosleep(&master_sleep, NULL);
+        else {
+            atomic_set(&banner->slave_done, 0);
+            pthread_barrier_wait(&banner->end_barrier);
+        }
+    }
+}
+
+void create_dest_disk_master(int nr_slaves, struct banner *banner);
+void create_dest_disk_master(int nr_slaves, struct banner *banner) {
+    pthread_t tid;
+    reduce_q = new_task_queue();
+    reduce_q->nr_slaves = nr_slaves;
+
+    pthread_create(&tid, NULL, dest_disk_master, banner);
+}
