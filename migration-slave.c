@@ -7,6 +7,7 @@
 #include "sysemu.h"
 #include "buffered_file.h"
 #include "block.h"
+#include "zlib.h"
 
 #define MULTI_TRY 100
 
@@ -25,7 +26,7 @@ FdMigrationStateSlave *
 tcp_start_outgoing_migration_slave(Monitor *mon,
                                    char *dest_ip,
                                    int64_t bandwidth_limit,
-                                   int SSL_type);
+                                   int SSL_type, int compression);
 void * start_host_slave(void *data);
 void init_host_slaves(struct FdMigrationState *s);
 void *start_dest_slave(void *data);
@@ -71,7 +72,7 @@ static int tcp_close_slave(FdMigrationStateSlave *s)
 
 //borrowed from arch_init.c
 #define RAM_SAVE_FLAG_EOS      0x10
-
+#define COMPRESS_BUFSIZE        (12 << 20) /* Compression buffer  12MB */
 
 /*
  * host_port: the target connection ip:port
@@ -80,7 +81,7 @@ FdMigrationStateSlave *
 tcp_start_outgoing_migration_slave(Monitor *mon,
                                    char *dest_ip,
                                    int64_t bandwidth_limit,
-                                   int SSL_type) {
+                                   int SSL_type, int compression) {
     FdMigrationStateSlave *s;
 
     DPRINTF("Creating migration slave structure\n");
@@ -99,6 +100,7 @@ tcp_start_outgoing_migration_slave(Monitor *mon,
         fprintf(stderr, "wrong ssl type use defult ssl solution");
         s->write = socket_write_slave;
     }
+    s->compression = compression;
     s->close = tcp_close_slave;//close tcp connection
     s->mig_state.cancel = migrate_fd_cancel;//migartion cancel callback func
     s->mig_state.get_status = migrate_fd_get_status;//get current migration status
@@ -124,6 +126,8 @@ start_host_slave(void *data) {
     QEMUFile *f;
     struct timespec slave_sleep = {0, 1000000};
     unsigned long data_sent;
+    char *comp_buf, *comped_buf;
+    int comp_pos, len, comped_len;
     
     if (parse_host_port(&addr, s->dest_ip) < 0) {
         fprintf(stderr, "wrong dest ip %s\n", s->dest_ip);
@@ -139,6 +143,12 @@ start_host_slave(void *data) {
         fprintf(stderr, "error creating socket\n");
         qemu_free(s);
         return NULL;
+    }
+    
+
+    if (s->compression){
+       comp_buf = (char *)malloc(COMPRESS_BUFSIZE);
+       comped_buf = (char *)malloc(COMPRESS_BUFSIZE);
     }
 
     //socket_set_nonblock(s->fd);
@@ -192,21 +202,38 @@ start_host_slave(void *data) {
             /* Section type */
             qemu_put_byte(f, QEMU_VM_SECTION_PART);
             qemu_put_be32(f, s->disk_task_queue->section_id);
-            /*
-             * handle disk
-             */
-            for (i = 0; i < body->len; i++) {
-                s->disk_task_queue->slave_sent[s->id] += 
-                    disk_save_block_slave(body->blocks[i].ptr, 
-                                          body->iter_num, s->file);
+
+            if (s->compression){
+                DPRINTF("compress data...\n");
+                for (i = 0; i < body->len; i++) {
+                    len = disk_putbuf_block_slave(body->blocks[i].ptr,
+                                                  body->iter_num, comp_buf + comp_pos);
+                    comp_pos += len;
+                    s->disk_task_queue->slave_sent[s->id] += BLOCK_SIZE;
+                    DPRINTF("put_block %d\n", len);
+                }
+                comp_pos += buf_put_be64(f, BLK_MIG_FLAG_EOS);
+                compress2(comped_buf, &comped_len, comp_buf, comp_pos, Z_DEFAULT_COMPRESSION);
+                DPRINTF("compressed: %d -> %d [%f]\n", comp_pos, comped_len, comped_len/comp_pos);
+                //qemu_fflush(f);
+                //free(body);
+            }else{          
+                /*
+                 * handle disk
+                 */
+                for (i = 0; i < body->len; i++) {
+                    s->disk_task_queue->slave_sent[s->id] += 
+                        disk_save_block_slave(body->blocks[i].ptr, 
+                                              body->iter_num, s->file);
+                }
+                /* End of the single task */
+                qemu_put_be64(f, BLK_MIG_FLAG_EOS);
+                qemu_fflush(f);
+
+                free(body);
             }
 
-            /* End of the single task */
-            qemu_put_be64(f, BLK_MIG_FLAG_EOS);
-            qemu_fflush(f);
-
-            free(body);
-        }
+       }
         /* check for memory */
         else if (queue_pop_task(s->mem_task_queue, &body_p) > 0) {
             body = (struct task_body *)body_p;
@@ -268,7 +295,7 @@ void init_host_slaves(struct FdMigrationState *s) {
     DPRINTF("Start init slaves %d\n", s->para_config->num_slaves);
     s->sender_barr = (struct migration_barrier *)malloc(sizeof(struct migration_barrier));
     init_migr_barrier(s->sender_barr, s->para_config->num_slaves);
-
+    
     next_ip = s->para_config->dest_ip_list;
     for (i = 0; i < s->para_config->num_slaves; i ++) {
         FdMigrationStateSlave *slave_s;
@@ -276,10 +303,10 @@ void init_host_slaves(struct FdMigrationState *s) {
         struct migration_slave *slave = (struct migration_slave *)malloc(sizeof(struct migration_slave));
         char *dest_ip = next_ip->host_port;
         int ssl_type = s->para_config->SSL_type;
-
+        int compression = s->para_config->compression;
         slave_s = tcp_start_outgoing_migration_slave(s->mon, 
                                                      dest_ip, s->para_config->default_throughput,
-                                                     ssl_type);
+                                                     ssl_type, compression);
         slave_s->mem_task_queue = s->mem_task_queue;
         slave_s->disk_task_queue = s->disk_task_queue;
         slave_s->sender_barr = s->sender_barr;

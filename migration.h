@@ -93,6 +93,7 @@ struct FdMigrationStateSlave
     int (*close)(struct FdMigrationStateSlave*);
     int (*write)(struct FdMigrationStateSlave*, const void *, size_t);
     void *opaque;
+    int compression;
     //    SSL_func;
     char *host_ip;
     char *dest_ip;

@@ -12,6 +12,7 @@
 /* Init Parallel Param */
 static void init_param(struct parallel_param *param) {
 	param->SSL_type = 0;
+    param->compression = 0;
 	param->host_ip_list = NULL;
 	param->dest_ip_list = NULL;
     param->num_slaves = 0;
@@ -73,6 +74,9 @@ struct parallel_param *parse_file(const char *file) {
 	if (get_one_num("SSL_type", list, &para_config->SSL_type, "SSL_type error") < 0)
 		goto error;
 
+    if (get_one_num("compression", list, &para_config->compression, "compression_type error") < 0)
+        goto error;
+
 	//Host IP
 	if (get_multi_ip("h_ip", list, &para_config->host_ip_list, "Host ip error") < 0)
 		goto error;
@@ -120,6 +124,7 @@ error:
 int reveal_param(struct parallel_param *param) {
 	struct ip_list *list;
 	printf("SSL_type: %d\n", param->SSL_type);
+    printf("compression: %d\n", param->compression);
 	printf("num_ips: %d\n", param->num_ips);
 	printf("num_slaves: %d\n", param->num_slaves);
 	printf("max_iter: %d\n", param->max_iter);

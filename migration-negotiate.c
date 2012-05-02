@@ -39,7 +39,7 @@ qemu_savevm_state_negotiate(FdMigrationState *s, QEMUFile *f) {
     qemu_put_be32(f, num_ips);
 
     qemu_put_be32(f, s->para_config->SSL_type);
-
+    qemu_put_be32(f, s->para_config->compression);
     for (i = 0; i < num_ips; i++) {
         tmp_ip_list->host_port[tmp_ip_list->len] = 0;
         qemu_put_be32(f, (unsigned int)tmp_ip_list->len);
@@ -65,7 +65,7 @@ default_config(const char *host_port) {
     para_config->dest_ip_list = dest;  //only init the dest ip
     para_config->host_ip_list = NULL;
     para_config->default_throughput = 1024 * 1024 * 1024;
-
+    para_config->compression = 0;
     return para_config;
 }
 

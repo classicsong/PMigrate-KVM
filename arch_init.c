@@ -300,6 +300,7 @@ ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
             qemu_put_buffer(f, (uint8_t *)block->idstr,
                             strlen(block->idstr));
         }
+        //TODO        
         qemu_put_buffer(f, p, TARGET_PAGE_SIZE);
 
         return TARGET_PAGE_SIZE;

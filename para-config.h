@@ -17,6 +17,7 @@ struct ip_list {
 
 struct parallel_param {
     int SSL_type;
+    int compression;
     struct ip_list *host_ip_list;
     struct ip_list *dest_ip_list;
     int num_ips;

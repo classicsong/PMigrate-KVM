@@ -120,9 +120,59 @@ static void blk_send(QEMUFile *f, BlkMigBlock * blk)
 
     qemu_put_buffer(f, blk->buf, BLOCK_SIZE);
 }
-
+unsigned long disk_putbuf_block_slave(void *ptr, int iter_num, char *f);
 unsigned long disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f);
 //classicsong
+
+int buf_put_byte(char *f, int v)
+{
+    f = v;
+    return 1;
+}
+int buf_put_be32(char *f, unsigned int v)
+{
+    buf_put_byte(f,v >> 24);
+    buf_put_byte(f[1],v  >> 16);
+    buf_put_byte(f[2],v  >> 8);
+    buf_put_byte(f[3], v);
+    return 4;
+}
+
+int buf_put_be64(char *f, uint64_t v)
+{
+    buf_put_be32(f, v >> 32);
+    buf_put_be32(f[1], v);
+    return 8;
+}
+
+unsigned long
+disk_putbuf_block_slave(void *ptr, int iter_num, char *f) {
+    char *oldptr = f;
+    int len;
+    BlkMigBlock *blk = (BlkMigBlock *)ptr;
+
+    //DPRINTF("put disk data, %lx\n", blk->sector);
+    /* sector number and flags 
+     * and iter number (classicsong)
+     */
+    len = buf_put_be64(f, (blk->sector << BDRV_SECTOR_BITS)
+		  | BLK_MIG_FLAG_DEVICE_BLOCK | (iter_num << DISK_VNUM_OFFSET));
+    f += len;
+
+    /* device name */    
+    len = buf_put_byte(f, len);
+    f += len;
+    len = strlen(blk->bmds->bs->device_name);    
+    memcopy(f, (uint8_t *)blk->bmds->bs->device_name, len);
+    f += len; 
+
+    memcopy(f, blk->buf, BLOCK_SIZE);
+    f += len;
+
+    return f - oldptr;
+}
+
+
 unsigned long
 disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f) {
     int len;

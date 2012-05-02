@@ -2000,7 +2000,7 @@ int qemu_loadvm_state(QEMUFile *f)
         int len;
 
         //classicsong add this
-        int num_slaves, num_ips, ssl_type, i;
+        int num_slaves, num_ips, ssl_type, i, compression;
         uint8_t *ip_buf;               //32 bytes is enough for dest_ip:port
 
         //DPRINTF("section type %d\n", section_type);
@@ -2078,7 +2078,7 @@ int qemu_loadvm_state(QEMUFile *f)
             num_slaves = qemu_get_be32(f);
             num_ips = qemu_get_be32(f);
             ssl_type = qemu_get_be32(f);
-
+            compression = qemu_get_be32(f);
             /*
              * Init sync point of the end of all end in the dest
              * We have one master and several slaves in the dest
