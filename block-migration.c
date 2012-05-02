@@ -163,10 +163,10 @@ disk_putbuf_block_slave(void *ptr, int iter_num, char *f) {
     len = buf_put_byte(f, len);
     f += len;
     len = strlen(blk->bmds->bs->device_name);    
-    memcopy(f, (uint8_t *)blk->bmds->bs->device_name, len);
+    memcpy(f, (uint8_t *)blk->bmds->bs->device_name, len);
     f += len; 
 
-    memcopy(f, blk->buf, BLOCK_SIZE);
+    memcpy(f, blk->buf, BLOCK_SIZE);
     f += len;
 
     return f - oldptr;
