@@ -74,6 +74,7 @@ struct parallel_param *parse_file(const char *file) {
 	if (get_one_num("SSL_type", list, &para_config->SSL_type, "SSL_type error") < 0)
 		goto error;
 
+    //Need compression
     if (get_one_num("compression", list, &para_config->compression, "compression_type error") < 0)
         goto error;
 
