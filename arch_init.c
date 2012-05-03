@@ -285,8 +285,6 @@ ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
     unsigned long len;
     RAMBlock *block = (RAMBlock *)block_p;
 
-    DPRINTF(
-
     if (is_dup_page(p, *p)) {
         len = buf_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
                       RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
