@@ -1515,7 +1515,7 @@ extern int ram_load(QEMUFile *f, void *opaque, int version_id);
 static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id, Byte *decomp_buf)
 {
 
-    DPRINTF("%d  %d  %d\n", !se->vmsd, se->load_state, ram_load);
+    DPRINTF("%d  %d  %d, %x\n", !se->vmsd, se->load_state, ram_load, se->load_state);
     if (!se->vmsd) {         /* Old style */
         //classicsong change it
         if (se->load_state == ram_load) {
