@@ -161,19 +161,19 @@ disk_putbuf_block_slave(void *ptr, int iter_num, Byte *f) {
      */
     len = buf_put_be64(f, (blk->sector << BDRV_SECTOR_BITS)
 		  | BLK_MIG_FLAG_DEVICE_BLOCK | (iter_num << DISK_VNUM_OFFSET));
-    f += len;
+    f = &f[len];
 
     /* device name */    
     len = buf_put_byte(f, len);
-    f += len;
+    f = &f[len];
     len = strlen(blk->bmds->bs->device_name);    
     memcpy(f, (uint8_t *)blk->bmds->bs->device_name, len);
-    f += len; 
+    f = &f[len];
 
     memcpy(f, blk->buf, BLOCK_SIZE);
-    f += BLOCK_SIZE;
+    f = &f[BLOCK_SIZE];
 
-    return f - oldptr;
+    return &f[0] - &oldptr[0];
 }
 
 

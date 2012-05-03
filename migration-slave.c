@@ -127,7 +127,7 @@ start_host_slave(void *data) {
     struct timespec slave_sleep = {0, 1000000};
     unsigned long data_sent;
     Bytef *comp_buf, *comped_buf;
-    int comp_pos, len, comped_len;
+    long comp_pos, len, comped_len;
     
     if (parse_host_port(&addr, s->dest_ip) < 0) {
         fprintf(stderr, "wrong dest ip %s\n", s->dest_ip);
