@@ -216,7 +216,7 @@ start_host_slave(void *data) {
                     comp_pos += len;
                     s->disk_task_queue->slave_sent[s->id] += BLOCK_SIZE;
                 }
-                comp_pos += buf_put_be64(f, BLK_MIG_FLAG_EOS);
+                comp_pos += buf_put_be64(comp_buf + comp_pos, BLK_MIG_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
                 compress2(comped_buf, &comped_len, comp_buf, comp_pos, COMPRESS_LEVEL);
                 DPRINTF("disk compressed: %d -> %d [%.2f]\n", comp_pos, comped_len, comped_len/(comp_pos + 0.0));
@@ -261,7 +261,7 @@ start_host_slave(void *data) {
                     comp_pos += len;
                     s->mem_task_queue->slave_sent[s->id] += actual_size;
                 }                
-                comp_pos += buf_put_be64(f, RAM_SAVE_FLAG_EOS);
+                comp_pos += buf_put_be64(comp_buf + comp_pos, RAM_SAVE_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
                 compress2(comped_buf, &comped_len, comp_buf, comp_pos, COMPRESS_LEVEL);                
                 DPRINTF("mem compressed: %d -> %d [%.2f]\n", comp_pos, comped_len, comped_len/(comp_pos + 0.0));
