@@ -284,39 +284,48 @@ ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
 unsigned long
 ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p, 
                      Byte *f, int  mem_vnum, int *actual_size) {
-    Byte *oldptr = f;
     unsigned long len;
+    int result = 0;
     RAMBlock *block = (RAMBlock *)block_p;
 
     if (is_dup_page(p, *p)) {
         len = buf_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
                       RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
+        result += len;            
     DPRINTF("putbe64 %lx\n",offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
                       RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
     f = &f[len];
         if (block) {
             len = buf_put_byte(f, strlen(block->idstr));
+            result += len;
             f = &f[len];
             len = strlen(block->idstr);
             memcpy(f, (uint8_t *)block->idstr, len);
+            result += len;
         }
         len = buf_put_byte(f, *p);
         f = &f[len];
+        result += len;
         actual_size = 1;
         return &f[0] - &oldptr[0];
     } else {
         len = buf_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | RAM_SAVE_FLAG_PAGE | (mem_vnum << MEM_VNUM_OFFSET));
+        result += len;
          f = &f[len];
         if (block) {
             len = buf_put_byte(f, strlen(block->idstr));
             f = &f[len];
+            result += len;
             len = strlen(block->idstr);
             memcpy(f, (uint8_t *)block->idstr, len);
+            result += len;
             f = &f[len];
         }
         memcpy(f, p, TARGET_PAGE_SIZE);
         f = &f[TARGET_PAGE_SIZE];
+        result += TARGET_PAGE_SIZE;
         actual_size =  TARGET_PAGE_SIZE;
+        DPRINTF("ASSERT %d, %d\n", &f[0] - &oldptr[0], result);
         return &f[0] - &oldptr[0];
     }
 }
