@@ -505,6 +505,7 @@ uint64_t buf_get_be64(Byte *f)
     uint64_t v;
     v = (uint64_t)buf_get_be32(f) << 32;
     v |= buf_get_be32(f);
+    DPRINTF("%ld|%lx|",v, f);
     return v;
 }
 

@@ -285,6 +285,8 @@ ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
     unsigned long len;
     RAMBlock *block = (RAMBlock *)block_p;
 
+    DPRINTF(
+
     if (is_dup_page(p, *p)) {
         len = buf_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
                       RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
@@ -581,7 +583,8 @@ int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
     if (version_id < 3 || version_id > 4) {
         return -EINVAL;
     }
-    
+   
+    DPRINTF("DEBUG: %lx", decomp_buf);
     if(decomped_buf)
         DPRINTF("handle uncompressed payload\n");
 
@@ -590,7 +593,6 @@ int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
             addr = qemu_get_be64(f);
         else
            addr = buf_get_be64(decomped_buf);
-        DPRINTF("RECV: %lx", addr);
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 
