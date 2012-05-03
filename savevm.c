@@ -478,9 +478,10 @@ int buf_put_be64(Byte *f, uint64_t v)
 
 int buf_get_byte(Byte *f)
 {
-    int result = f[0];
+    int result = *f;
     f = &f[1];    
     return result;
+
 }
 
 unsigned int buf_get_be32(Byte *f)
@@ -505,7 +506,6 @@ uint64_t buf_get_be64(Byte *f)
     uint64_t v;
     v = (uint64_t)buf_get_be32(f) << 32;
     v |= buf_get_be32(f);
-    DPRINTF("%ld|%lx|",v, f);
     return v;
 }
 
