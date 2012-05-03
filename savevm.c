@@ -471,6 +471,7 @@ int buf_put_be32(Byte *f, unsigned int v)
 
 int buf_put_be64(Byte *f, uint64_t v)
 {
+    DPRINTF("[%lx]\n",v);
     buf_put_be32(f, v >> 32);
     buf_put_be32(&f[1], v);
     return 8;
