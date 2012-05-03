@@ -1250,11 +1250,13 @@ static int block_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_
             {
                 len = qemu_get_byte(f);
                 qemu_get_buffer(f, (uint8_t *)device_name, len);
+                device_name[len] = '\0';
             }else{
                 len = buf_get_byte(decomped_buf);
                 buf_get_buffer(decomped_buf, (uint32_t *)device_name, len);
+                device_name[len] = '\0';
+                DPRINTF("[DEV]%s\n",device_name);
             }
-            device_name[len] = '\0';
 
             bs = bdrv_find(device_name);
             if (!bs) {
