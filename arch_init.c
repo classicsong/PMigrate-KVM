@@ -578,7 +578,6 @@ int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
         return -EINVAL;
     }
    
-    DPRINTF("DEBUG: %lx", decomped_buf);
     if(decomped_buf)
         DPRINTF("handle uncompressed payload\n");
 
@@ -587,7 +586,6 @@ int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
             addr = qemu_get_be64(f);
         else
            addr = buf_get_be64(decomped_buf);
-        DPRINTF("%lx|", addr);
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 
