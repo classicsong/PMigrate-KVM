@@ -21,10 +21,10 @@
     do { } while (0)
 #endif
 
-Byte __thread *decomp_buf;
-Byte __thread *decomped_buf;
-Byte __thread *decomped_ptr;
-Byte __thread *decomp_ptr;
+Bytef __thread *decomp_buf;
+Bytef __thread *decomped_buf;
+Bytef __thread *decomped_ptr;
+Bytef __thread *decomp_ptr;
 
 FdMigrationStateSlave *
 tcp_start_outgoing_migration_slave(Monitor *mon,
