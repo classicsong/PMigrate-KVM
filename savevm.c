@@ -478,9 +478,10 @@ int buf_put_be64(Byte *f, uint64_t v)
 
 int buf_get_byte(Byte *f)
 {
+    f = &decomped_buf;
     DPRINTF("GET VALUE FROM %x VALUES %d\n", &f[0], f[0]);
     int result = f[0];
-    f = &f[1];    
+    decomped_buf = &decomped_buf[1];
     return result;
 
 }
@@ -497,8 +498,8 @@ unsigned int buf_get_be32(Byte *f)
 
 int buf_get_buffer(QEMUFile *f, uint8_t *buf, int size1)
 {
-    memcpy(buf, f, size1);
-    f = &f[size1];
+    memcpy(buf, decomped_buf, size1);
+    decomped_buf = &decomped_buf[size1];
     return 1;
 }
 
