@@ -309,8 +309,8 @@ start_host_slave(void *data) {
         }
     }
     if (s->compression){
-//        free(comp_buf);
-//        free(comped_buf);
+        free(comp_buf);
+        free(comped_buf);
     }
         
     DPRINTF("slave terminate\n");
