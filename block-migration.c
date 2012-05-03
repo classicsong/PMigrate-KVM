@@ -25,6 +25,7 @@
 //classicsong
 #include "migr-vqueue.h"
 
+
 #define BLOCK_SIZE (BDRV_SECTORS_PER_DIRTY_CHUNK << BDRV_SECTOR_BITS)
 
 #define BLK_MIG_FLAG_DEVICE_BLOCK       0x01
@@ -94,6 +95,8 @@ typedef struct BlkMigState {
     int reads;
 } BlkMigState;
 
+typedef unsigned char Byte;
+
 static BlkMigState block_mig_state;
 
 uint64_t blk_read_remaining(void);
@@ -120,34 +123,35 @@ static void blk_send(QEMUFile *f, BlkMigBlock * blk)
 
     qemu_put_buffer(f, blk->buf, BLOCK_SIZE);
 }
-unsigned long disk_putbuf_block_slave(void *ptr, int iter_num, char *f);
+unsigned long disk_putbuf_block_slave(void *ptr, int iter_num, Byte *f);
 unsigned long disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f);
 //classicsong
 
-int buf_put_byte(char *f, int v)
+int buf_put_byte(Byte *f, int v)
 {
     f = v;
     return 1;
+
 }
-int buf_put_be32(char *f, unsigned int v)
+int buf_put_be32(Byte *f, unsigned int v)
 {
     buf_put_byte(f,v >> 24);
-    buf_put_byte(f[1],v  >> 16);
-    buf_put_byte(f[2],v  >> 8);
-    buf_put_byte(f[3], v);
+    buf_put_byte(&f[1],v  >> 16);
+    buf_put_byte(&f[2],v  >> 8);
+    buf_put_byte(&f[3], v);
     return 4;
 }
 
-int buf_put_be64(char *f, uint64_t v)
+int buf_put_be64(Byte *f, uint64_t v)
 {
     buf_put_be32(f, v >> 32);
-    buf_put_be32(f[1], v);
+    buf_put_be32(&f[1], v);
     return 8;
 }
 
 unsigned long
-disk_putbuf_block_slave(void *ptr, int iter_num, char *f) {
-    char *oldptr = f;
+disk_putbuf_block_slave(void *ptr, int iter_num, Byte *f) {
+    Byte *oldptr = f;
     int len;
     BlkMigBlock *blk = (BlkMigBlock *)ptr;
 
@@ -167,7 +171,7 @@ disk_putbuf_block_slave(void *ptr, int iter_num, char *f) {
     f += len; 
 
     memcpy(f, blk->buf, BLOCK_SIZE);
-    f += len;
+    f += BLOCK_SIZE;
 
     return f - oldptr;
 }
