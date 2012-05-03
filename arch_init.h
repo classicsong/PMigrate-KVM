@@ -19,10 +19,11 @@ enum {
 };
 
 extern const uint32_t arch_type;
+typedef unsigned char Byte;
 
 void select_soundhw(const char *optarg);
 int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque);
-int ram_load(QEMUFile *f, void *opaque, int version_id);
+int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf);
 void do_acpitable_option(const char *optarg);
 void do_smbios_option(const char *optarg);
 void cpudef_init(void);

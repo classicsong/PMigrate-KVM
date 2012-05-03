@@ -274,6 +274,47 @@ static void sort_ram_list(void)
 
 unsigned long ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
                          struct FdMigrationStateSlave *s, int mem_vnum);
+unsigned long
+ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p, 
+                     Byte *f, int mem_vnum, int *actual_size); 
+
+unsigned long
+ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p, 
+                     Byte *f, int  mem_vnum, int *actual_size) {
+    Byte *oldptr = f;
+    int len;
+    RAMBlock *block = (RAMBlock *)block_p;
+
+    if (is_dup_page(p, *p)) {
+        len = buf_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
+                      RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
+        f = &f[len];
+        if (block) {
+            len = buf_put_byte(f, strlen(block->idstr));
+            f = &f[len];
+            len = strlen(block->idstr);
+            memcpy(f, (uint8_t *)block->idstr, len);
+        }
+        len = buf_put_byte(f, *p);
+        f = &f[len];
+        actual_size = 1;
+        return &f[0] - &oldptr[0];
+    } else {
+        len = buf_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | RAM_SAVE_FLAG_PAGE | (mem_vnum << MEM_VNUM_OFFSET));
+        f = &f[len];
+        if (block) {
+            len = buf_put_byte(f, strlen(block->idstr));
+            f = &f[len];
+            len = strlen(block->idstr);
+            memcpy(f, (uint8_t *)block->idstr, len);
+            f = &f[len];
+        }
+        memcpy(f, p, TARGET_PAGE_SIZE);
+        f = &f[TARGET_PAGE_SIZE];
+        actual_size =  TARGET_PAGE_SIZE;
+        return &f[0] - &oldptr[0];
+    }
+}
 
 //classicsong
 unsigned long
@@ -300,7 +341,6 @@ ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
             qemu_put_buffer(f, (uint8_t *)block->idstr,
                             strlen(block->idstr));
         }
-        //TODO        
         qemu_put_buffer(f, p, TARGET_PAGE_SIZE);
 
         return TARGET_PAGE_SIZE;
@@ -528,7 +568,7 @@ static inline void *host_from_stream_offset(QEMUFile *f,
 
 #include "savevm.h"
 
-int ram_load(QEMUFile *f, void *opaque, int version_id)
+int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
 {
     ram_addr_t addr;
     int flags;
@@ -539,8 +579,11 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
     }
 
     do {
-        addr = qemu_get_be64(f);
-
+        if(decomped_buf == NULL)
+            addr = qemu_get_be64(f);
+        else
+           ;// addr = buf_get_be64(decomped_buf);
+             
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 

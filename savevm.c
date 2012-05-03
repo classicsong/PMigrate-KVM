@@ -452,6 +452,30 @@ static int bdrv_fclose(void *opaque)
     return 0;
 }
 
+typedef unsigned char Byte;
+
+int buf_put_byte(Byte *f, int v)
+{
+    f = v;
+    return 1;
+
+}
+int buf_put_be32(Byte *f, unsigned int v)
+{
+    buf_put_byte(f,v >> 24);
+    buf_put_byte(&f[1],v  >> 16);
+    buf_put_byte(&f[2],v  >> 8);
+    buf_put_byte(&f[3], v);
+    return 4;
+}
+
+int buf_put_be64(Byte *f, uint64_t v)
+{
+    buf_put_be32(f, v >> 32);
+    buf_put_be32(&f[1], v);
+    return 8;
+}
+
 static QEMUFile *qemu_fopen_bdrv(BlockDriverState *bs, int is_writable)
 {
     if (is_writable)
@@ -1342,7 +1366,7 @@ int vmstate_load_state(QEMUFile *f, const VMStateDescription *vmsd,
         return -EINVAL;
     }
     if  (version_id < vmsd->minimum_version_id) {
-        return vmsd->load_state_old(f, opaque, version_id);
+        return vmsd->load_state_old(f, opaque, version_id, NULL);
     }
     if (vmsd->pre_load) {
         int ret = vmsd->pre_load(opaque);
@@ -1460,10 +1484,10 @@ static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id)
     if (!se->vmsd) {         /* Old style */
         //classicsong change it
         if (se->load_state == ram_load) {
-            return se->load_state(f, se, version_id);
+            return se->load_state(f, se, version_id, NULL);
         }
         
-        return se->load_state(f, se->opaque, version_id);
+        return se->load_state(f, se->opaque, version_id, NULL);
     }
     return vmstate_load_state(f, se->vmsd, se->opaque, version_id);
 }
@@ -1490,6 +1514,7 @@ static void vmstate_save(QEMUFile *f, SaveStateEntry *se)
 #define QEMU_VM_SECTION_NEGOTIATE    0x06
 #define QEMU_VM_ITER_END             0x07
 
+#define COMPRESS_BUFSIZE (12 << 20)
 
 bool qemu_savevm_state_blocked(Monitor *mon)
 {
@@ -1898,14 +1923,16 @@ struct FdMigrationDestState *dest_state;
 typedef QLIST_HEAD(migr_handler, LoadStateEntry) migr_handler;
                                                  
 void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers, 
-                                      struct banner *banner, int fd);
+                                      struct banner *banner, int fd, int compression, Byte *decomp_buf, Byte *decomped_buf);
 void 
 slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers, 
-                                 struct banner *banner, int fd) {
+                                 struct banner *banner, int fd, int compression, Byte *decomp_buf, Byte *decomped_buf) {
     LoadStateEntry *le;
     uint8_t section_type;
     uint32_t section_id;
     int ret;
+    int decomp_size;
+    long  comped_size;
 
     while ((section_type = qemu_get_byte(f)) != QEMU_VM_EOF) {
         /*
@@ -1928,6 +1955,16 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
                 ret = -EINVAL;
                 goto out;
             }
+
+            if(compression){
+                comped_size = qemu_get_be32(f);
+                decomp_size = COMPRESS_BUFSIZE;
+                uncompress(decomped_buf, &decomp_size, decomp_buf, comped_size);
+                DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, comped_size);
+                decomped_buf[decomp_size] = '\0';
+                DPRINTF("!!%s\n", decomped_buf);
+            }
+                
 
             /*
              * ram use ram_load
@@ -1955,7 +1992,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
     return;
 }
 
-extern pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers, 
+extern pthread_t create_dest_slave(char *listen_ip, int ssl_type, int compression, void *loadvm_handlers, 
                                    struct banner *banner, pthread_barrier_t *end_barrier);
 extern void create_dest_disk_master(int nr_slaves, struct banner *banner);
 
@@ -2105,7 +2142,7 @@ int qemu_loadvm_state(QEMUFile *f)
                 qemu_get_buffer(f, ip_buf, len);
                 ip_buf[len] = 0;
                 DPRINTF("get data %s\n", ip_buf);
-                tid = create_dest_slave((char *)ip_buf, ssl_type, &loadvm_handlers, disk_banner, &end_barrier);
+                tid = create_dest_slave((char *)ip_buf, ssl_type, compression, &loadvm_handlers, disk_banner, &end_barrier);
                 struct migration_slave *slave = (struct migration_slave *)malloc(sizeof(struct migration_slave));
                 slave->slave_id = tid;
                 slave->next = dest_slave_list;

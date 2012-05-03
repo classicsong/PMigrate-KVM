@@ -69,7 +69,7 @@ static int tcp_close_slave(FdMigrationStateSlave *s)
 #define QEMU_VM_ITER_END             0x07
 //borrowed from block-migration.c
 #define BLK_MIG_FLAG_EOS                0x02
-
+#define COMPRESS_LEVEL          Z_DEFAULT_COMPRESSION
 //borrowed from arch_init.c
 #define RAM_SAVE_FLAG_EOS      0x10
 #define COMPRESS_BUFSIZE        (12 << 20) /* Compression buffer  12MB */
@@ -122,7 +122,7 @@ start_host_slave(void *data) {
     FdMigrationStateSlave *s = (FdMigrationStateSlave *)data;
     struct task_body *body;
     struct sockaddr_in addr;
-    int i, ret;
+    int i, ret, actual_size;
     QEMUFile *f;
     struct timespec slave_sleep = {0, 1000000};
     unsigned long data_sent;
@@ -204,21 +204,23 @@ start_host_slave(void *data) {
             qemu_put_be32(f, s->disk_task_queue->section_id);
 
             if (s->compression){
-                DPRINTF("compress data...\n");
                 for (i = 0; i < body->len; i++) {
                     len = disk_putbuf_block_slave(body->blocks[i].ptr,
                                                   body->iter_num, comp_buf + comp_pos);
                     comp_pos += len;
                     s->disk_task_queue->slave_sent[s->id] += BLOCK_SIZE;
-                    DPRINTF("put_block %d\n", comp_pos);
                 }
                 comp_pos += buf_put_be64(f, BLK_MIG_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
-                compress2(comped_buf, &comped_len, comp_buf, comp_pos, Z_DEFAULT_COMPRESSION);
-                DPRINTF("compressed: %d -> %d [%f]\n", comp_pos, comped_len, comped_len/comp_pos);
+                compress2(comped_buf, &comped_len, comp_buf, comp_pos, COMPRESS_LEVEL);
+                DPRINTF("disk compressed: %d -> %d [%.2f]\n", comp_pos, comped_len, comped_len/(comp_pos + 0.0));
+                comped_buf[comped_len] = '\0';
+                DPRINTF("!!%s\n", comped_buf);
+                qemu_put_be32(f, comped_len);
+                qemu_put_buffer(f, comped_buf, comped_len);
+                qemu_fflush(f);
                 comp_pos = 0;
-                //qemu_fflush(f);
-                //free(body);
+                free(body);
             }else{          
                 /*
                  * handle disk
@@ -245,12 +247,31 @@ start_host_slave(void *data) {
             /* Section type */
             qemu_put_byte(f, QEMU_VM_SECTION_PART);
             qemu_put_be32(f, s->mem_task_queue->section_id);
-            for (i = 0; i < body->len; i++) {
-                s->mem_task_queue->slave_sent[s->id] += 
-                    ram_save_block_slave(body->pages[i].addr, body->pages[i].ptr, 
-                                         body->pages[i].block, s, s->mem_task_queue->iter_num);
+            if(s->compression){
+                for (i = 0; i < body->len; i++) {
+                    len = ram_putbuf_block_slave(body->pages[i].addr, body->pages[i].ptr, 
+                                             body->pages[i].block, s, s->mem_task_queue->iter_num, &actual_size);
+                    comp_pos += len;
+                    s->mem_task_queue->slave_sent[s->id] += actual_size;
+                }
+                comp_pos += buf_put_be64(f, RAM_SAVE_FLAG_EOS);
+                comped_len = COMPRESS_BUFSIZE;
+                compress2(comped_buf, &comped_len, comp_buf, comp_pos, COMPRESS_LEVEL);
+                DPRINTF("mem compressed: %d -> %d [%.2f]\n", comp_pos, comped_len, comped_len/(comp_pos + 0.0));
+                comped_buf[comped_len] = '\0';
+                DPRINTF("!!%s\n", comped_buf); 
+                qemu_put_be32(f, comped_len);
+                qemu_put_buffer(f, comped_buf, comped_len);
+                qemu_fflush(f);
+                comp_pos = 0;
+                free(body);
+            }else{
+                for (i = 0; i < body->len; i++) {
+                    s->mem_task_queue->slave_sent[s->id] += 
+                        ram_save_block_slave(body->pages[i].addr, body->pages[i].ptr, 
+                                             body->pages[i].block, s, s->mem_task_queue->iter_num);
+                }
             }
-
             /* End of the single task */
             qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
             qemu_fflush(f);
@@ -285,7 +306,11 @@ start_host_slave(void *data) {
             nanosleep(&slave_sleep, NULL);
         }
     }
-
+    if (s->compression){
+        free(comp_buf);
+        free(comped_buf);
+    }
+        
     DPRINTF("slave terminate\n");
     return NULL;
 }
@@ -327,6 +352,7 @@ void init_host_slaves(struct FdMigrationState *s) {
 struct dest_slave_para{
     char *listen_ip;
     int ssl_type;
+    int compression;
     void *handlers;
     struct banner *banner;
     pthread_barrier_t *end_barrier;
@@ -339,7 +365,7 @@ struct dest_slave_para{
 //    return -1;
 //}
 
-extern void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers, struct banner *banner, int fd);
+extern void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers, struct banner *banner, int fd, int compression, Byte *decomp_buf, Byte *decomped_buf);
 
 void *start_dest_slave(void *data) {
     struct dest_slave_para * para = (struct dest_slave_para *)data;
@@ -349,6 +375,7 @@ void *start_dest_slave(void *data) {
     int fd;
     int con_fd;
     int val;
+    Byte *decomp_buf, *decomped_buf;
     QEMUFile *f;
 
     if (parse_host_port(&addr, para->listen_ip) < 0) {
@@ -364,6 +391,11 @@ void *start_dest_slave(void *data) {
     if (fd == -1) {
         fprintf(stderr, "socket error %d\n", socket_error());
         return NULL;
+    }
+
+    if(para->compression){
+        decomp_buf = malloc(COMPRESS_BUFSIZE);
+        decomped_buf = malloc(COMPRESS_BUFSIZE);
     }
 
     val = 1;
@@ -409,12 +441,16 @@ void *start_dest_slave(void *data) {
     /*
      * slave handle incoming data
      */
-    slave_process_incoming_migration(f, para->handlers, para->banner, con_fd);
+    slave_process_incoming_migration(f, para->handlers, para->banner, con_fd, para->compression, decomp_buf, decomped_buf);
 
     pthread_barrier_wait(para->end_barrier);    
     DPRINTF("Dest slave end\n");
     //slave_loadvm_state();
 
+    if(para->compression){
+        free(decomp_buf);
+        free(decomped_buf);        
+    }
  err2:
     close(con_fd);
  err:
@@ -423,10 +459,10 @@ void *start_dest_slave(void *data) {
     free(para);
     return NULL;
 }
-pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers, 
+pthread_t create_dest_slave(char *listen_ip, int ssl_type, int compression, void *loadvm_handlers, 
                             struct banner *banner, pthread_barrier_t *end_barrier);
 
-pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers, 
+pthread_t create_dest_slave(char *listen_ip, int ssl_type, int compression, void *loadvm_handlers, 
                             struct banner *banner, pthread_barrier_t *end_barrier) {
     struct dest_slave_para *data = (struct dest_slave_para *)malloc(sizeof(struct dest_slave_para));
     pthread_t tid;
@@ -435,6 +471,7 @@ pthread_t create_dest_slave(char *listen_ip, int ssl_type, void *loadvm_handlers
 
     data->listen_ip = listen_ip;
     data->ssl_type = ssl_type;
+    data->compression = compression;
     data->handlers = loadvm_handlers;
     data->banner = banner;
     data->end_barrier = end_barrier;

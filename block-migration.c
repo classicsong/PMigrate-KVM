@@ -127,28 +127,6 @@ unsigned long disk_putbuf_block_slave(void *ptr, int iter_num, Byte *f);
 unsigned long disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f);
 //classicsong
 
-int buf_put_byte(Byte *f, int v)
-{
-    f = v;
-    return 1;
-
-}
-int buf_put_be32(Byte *f, unsigned int v)
-{
-    buf_put_byte(f,v >> 24);
-    buf_put_byte(&f[1],v  >> 16);
-    buf_put_byte(&f[2],v  >> 8);
-    buf_put_byte(&f[3], v);
-    return 4;
-}
-
-int buf_put_be64(Byte *f, uint64_t v)
-{
-    buf_put_be32(f, v >> 32);
-    buf_put_be32(&f[1], v);
-    return 8;
-}
-
 unsigned long
 disk_putbuf_block_slave(void *ptr, int iter_num, Byte *f) {
     Byte *oldptr = f;
@@ -1135,7 +1113,7 @@ disk_write(void *bs_p, int64_t addr, void *buf_p, int nr_sectors) {
     return ret;
 };
 
-static int block_load(QEMUFile *f, void *opaque, int version_id)
+static int block_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
 {
     static int banner_printed;
     int len, flags;
