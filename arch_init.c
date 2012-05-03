@@ -577,12 +577,15 @@ int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
     if (version_id < 3 || version_id > 4) {
         return -EINVAL;
     }
+    
+    if(decomped_buf)
+        DPRINTF("handle uncompressed payload\n");
 
     do {
         if(decomped_buf == NULL)
             addr = qemu_get_be64(f);
         else
-           ;// addr = buf_get_be64(decomped_buf);
+           addr = buf_get_be64(decomped_buf);
              
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
@@ -616,10 +619,17 @@ int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
                     RAMBlock *block;
                     uint8_t len;
 
-                    len = qemu_get_byte(f);
-                    qemu_get_buffer(f, (uint8_t *)id, len);
-                    id[len] = 0;
-                    length = qemu_get_be64(f);
+                    if (decomped_buf == NULL){
+                        len = qemu_get_byte(f);
+                        qemu_get_buffer(f, (uint8_t *)id, len);
+                        id[len] = 0;
+                        length = qemu_get_be64(f);
+                    }else{
+                        len = buf_get_byte(decomped_buf);
+                        buf_get_buffer(decomped_buf, (uint8_t *)id, len);
+                        id[len] = 0;
+                        length = buf_get_be64(decomped_buf);
+                    }
 
                     DPRINTF("memory id %s\n", id);
 
@@ -698,7 +708,10 @@ int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
              * curr_vnum set to 3 means current memory is updating to 1
              */
             if (curr_vnum > mem_vnum * 2) {
-                ch = qemu_get_byte(f);
+                if (decomped_buf == NULL)
+                    ch = qemu_get_byte(f);
+                else
+                    ch = buf_get_byte(decomped_buf);
                 DPRINTF("skip page patch %d, %d\n", curr_vnum, mem_vnum*2);
                 goto end;
             }
@@ -710,8 +723,10 @@ int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
                 /* fail holding the page */
                 goto re_check_press;
             }
-
-            ch = qemu_get_byte(f);
+            if (decomped_buf == NULL)                
+                ch = qemu_get_byte(f);
+            else
+                ch = buf_get_byte(decomped_buf);
 
             memset(host, ch, TARGET_PAGE_SIZE);
 #ifndef _WIN32
@@ -768,7 +783,10 @@ int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
             if (curr_vnum > mem_vnum * 2) {
                 /* the memory data is sent at host end so we must receive it */
                 uint8_t buf[TARGET_PAGE_SIZE];
-                qemu_get_buffer(f, buf, TARGET_PAGE_SIZE);
+                if (decomped_buf == NULL)
+                    qemu_get_buffer(f, buf, TARGET_PAGE_SIZE);
+                else
+                    buf_get_buffer(decomped_buf, buf, TARGET_PAGE_SIZE);
                 DPRINTF("skip page patch %d, %d\n", curr_vnum, mem_vnum * 2);
                 goto end;
             }
@@ -781,7 +799,10 @@ int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
                 goto re_check_nor;
             }
 
-            qemu_get_buffer(f, host, TARGET_PAGE_SIZE);
+            if (decomped_buf == NULL)
+                qemu_get_buffer(f, host, TARGET_PAGE_SIZE);
+            else
+                buf_get_buffer(decomped_buf, host, TARGET_PAGE_SIZE);
 
             /*
              * now we release the page

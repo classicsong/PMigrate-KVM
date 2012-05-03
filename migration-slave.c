@@ -219,8 +219,6 @@ start_host_slave(void *data) {
                 qemu_put_buffer(f, comped_buf, comped_len); 
                 qemu_fflush(f);
                 comp_pos = 0;
-                comped_buf[100] = '\0';
-                DPRINTF("!!%s\n", comped_buf);
                 free(body);
             }else{          
                 /*
@@ -264,8 +262,6 @@ start_host_slave(void *data) {
                 qemu_put_be32(f, comped_len);
                 qemu_put_buffer(f, comped_buf, comped_len);
                 qemu_fflush(f);
-                comped_buf[100] = '\0';
-                DPRINTF("!!%s\n", comped_buf); 
                 comp_pos = 0;
                 free(body);
             }else{

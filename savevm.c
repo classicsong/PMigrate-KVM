@@ -476,6 +476,38 @@ int buf_put_be64(Byte *f, uint64_t v)
     return 8;
 }
 
+int buf_get_byte(Byte *f)
+{
+    int result = f[0];
+    f = &f[1];    
+    return result;
+}
+
+unsigned int buf_get_be32(Byte *f)
+{
+    unsigned int v;
+    v = buf_get_byte(f) << 24;
+    v |= buf_get_byte(f) << 16;
+    v |= buf_get_byte(f) << 8;
+    v |= buf_get_byte(f);
+    return v;
+}
+
+int buf_get_buffer(QEMUFile *f, uint8_t *buf, int size1)
+{
+    memcpy(buf, f, size1);
+    f = &f[size1];
+    return 1;
+}
+
+uint64_t buf_get_be64(Byte *f)
+{
+    uint64_t v;
+    v = (uint64_t)buf_get_be32(f) << 32;
+    v |= buf_get_be32(f);
+    return v;
+}
+
 static QEMUFile *qemu_fopen_bdrv(BlockDriverState *bs, int is_writable)
 {
     if (is_writable)
@@ -644,6 +676,7 @@ static int qemu_peek_byte(QEMUFile *f)
     }
     return f->buf[f->buf_index];
 }
+
 
 int qemu_get_byte(QEMUFile *f)
 {
@@ -1479,17 +1512,17 @@ void vmstate_save_state(QEMUFile *f, const VMStateDescription *vmsd,
 
 extern int ram_load(QEMUFile *f, void *opaque, int version_id);
 
-static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id)
+static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id, Byte *decomp_buf)
 {
     if (!se->vmsd) {         /* Old style */
         //classicsong change it
         if (se->load_state == ram_load) {
-            return se->load_state(f, se, version_id, NULL);
+            return se->load_state(f, se, version_id, decomp_buf);
         }
         
-        return se->load_state(f, se->opaque, version_id, NULL);
+        return se->load_state(f, se->opaque, version_id, decomp_buf);
     }
-    return vmstate_load_state(f, se->vmsd, se->opaque, version_id);
+    return vmstate_load_state(f, se->vmsd, se->opaque, decomp_buf);
 }
 
 static void vmstate_save(QEMUFile *f, SaveStateEntry *se)
@@ -1963,20 +1996,18 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
                 decomped_size = COMPRESS_BUFSIZE;
                 uncompress(decomped_buf, &decomped_size, decomp_buf, decomp_size);
                 DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, decomped_size);
-                decomped_buf[100] = '\0';
-                DPRINTF("!!%s\n", decomped_buf);
-            }
-                
 
-            /*
-             * ram use ram_load
-             * disk use block_load
-             */
-            ret = vmstate_load(f, le->se, le->version_id);
-            if (ret < 0) {
-                fprintf(stderr, "qemu: warning: error while loading state section id %d\n",
-                        section_id);
-                goto out;
+            }else{                
+                /*
+                 * ram use ram_load
+                 * disk use block_load
+                 */
+                ret = vmstate_load(f, le->se, le->version_id, NULL);
+                if (ret < 0) {
+                    fprintf(stderr, "qemu: warning: error while loading state section id %d\n",
+                            section_id);
+                    goto out;
+                } 
             }
             break;
         case QEMU_VM_ITER_END:
@@ -2079,7 +2110,7 @@ int qemu_loadvm_state(QEMUFile *f)
             le->version_id = version_id;
             QLIST_INSERT_HEAD(&loadvm_handlers, le, entry);
 
-            ret = vmstate_load(f, se, le->version_id);
+            ret = vmstate_load(f, se, le->version_id, NULL);
             if (ret < 0) {
                 fprintf(stderr, "qemu: warning: error while loading state for instance 0x%x of device '%s'\n",
                         instance_id, idstr);
@@ -2101,7 +2132,7 @@ int qemu_loadvm_state(QEMUFile *f)
                 goto out;
             }
 
-            ret = vmstate_load(f, le->se, le->version_id);
+            ret = vmstate_load(f, le->se, le->version_id, NULL);
             if (ret < 0) {
                 fprintf(stderr, "qemu: warning: error while loading state section id %d\n",
                         section_id);

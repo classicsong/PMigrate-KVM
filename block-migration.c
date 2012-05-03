@@ -1130,8 +1130,10 @@ static int block_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_
      * at the initialization, the block_load will receive a BLK_MIG_FLAG_EOS
      */
     do {
-        addr = qemu_get_be64(f);
-
+        if (decomped_buf == NULL)
+            addr = qemu_get_be64(f);
+        else
+            addr = buf_get_be64(decomped_buf);
         flags = addr & ~BDRV_SECTOR_MASK;
         addr >>= BDRV_SECTOR_BITS;
 
@@ -1152,10 +1154,16 @@ static int block_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_
             struct timespec sleep = {0, 10000000}; //sleep 10ms
 
             /* get device name */
-            len = qemu_get_byte(f);
-            qemu_get_buffer(f, (uint8_t *)device_name, len);
-            device_name[len] = '\0';
-//            DPRINTF("[DEV]%s\n", device_name);
+            if (decomped_buf == NULL){
+                len = qemu_get_byte(f);
+                qemu_get_buffer(f, (uint8_t *)device_name, len);
+                device_name[len] = '\0';
+            }else{
+                len = buf_get_byte(f);
+                buf_get_buffer(decomped_buf, (uint8_t *)device_name, len);
+                device_name[len] = '\0';
+                DPRINTF("[DEV]%s\n", device_name);  
+            }
             bs = bdrv_find(device_name);
             if (!bs) {
                 fprintf(stderr, "Error unknown block device %s\n",
@@ -1184,8 +1192,10 @@ static int block_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_
             }
 
             buf = qemu_malloc(BLOCK_SIZE);
-
-            qemu_get_buffer(f, buf, BLOCK_SIZE);
+            if(decomped_buf == NULL)
+                qemu_get_buffer(f, buf, BLOCK_SIZE);
+            else
+                buf_get_buffer(decomped_buf, buf, BLOCK_SIZE);
 
             /*
         re_check_nor:
@@ -1236,8 +1246,14 @@ static int block_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_
              * get device name first
              * and then the sector size
              */
-            len = qemu_get_byte(f);
-            qemu_get_buffer(f, (uint8_t *)device_name, len);
+            if (decomped_buf == NULL)
+            {
+                len = qemu_get_byte(f);
+                qemu_get_buffer(f, (uint8_t *)device_name, len);
+            }else{
+                len = buf_get_byte(decomped_buf);
+                buf_get_buffer(decomped_buf, (uint32_t *)device_name, len);
+            }
             device_name[len] = '\0';
 
             bs = bdrv_find(device_name);
@@ -1246,8 +1262,10 @@ static int block_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_
                         device_name);
                 return -EINVAL;
             }
-
-            total_sectors = qemu_get_be64(f);
+            if (decomped_buf == NULL)
+                total_sectors = qemu_get_be64(f);
+            else
+                total_sectors = buf_get_be64(decomped_buf);
             DPRINTF("NEGOTIATE disk bs %s, size %ld\n", device_name, total_sectors);
 
             bs->version_queue = (uint32_t *)calloc(total_sectors, sizeof(uint32_t));
