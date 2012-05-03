@@ -107,10 +107,10 @@
 #define ARP_PTYPE_IP 0x0800
 #define ARP_OP_REQUEST_REV 0x3
 
-extern __thread *decomp_ptr;
-extern __thread *decomped_ptr;
-extern __thread *decomp_buf;
-extern __thread *decomped_buf;
+extern __thread Bytef *decomp_ptr;
+extern __thread Bytef *decomped_ptr;
+extern __thread Bytef *decomp_buf;
+extern __thread Bytef *decomped_buf;
 
 
 static int announce_self_create(uint8_t *buf,
@@ -2008,7 +2008,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
                 DPRINTF("UNPACKED HEAD:\n");
                 int j;
                 for (j = 0; j < 100; j++)
-                    printf("%x|", decomped_buf[j]);
+                    printf("%x|", decomped_ptr[j]);
                 printf("\n");
                 ret = vmstate_load(f, le->se, le->version_id);
                 if (ret < 0) {
