@@ -1967,7 +1967,7 @@ extern __thread *decomped_ptr;
 
 void 
 slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers, 
-                                 struct banner *banner, int fd, int compression, Byte *decomp_buf, Byte *decomped_buf) {
+                                 struct banner *banner, int fd, int compression) {
     LoadStateEntry *le;
     uint8_t section_type;
     uint32_t section_id;
