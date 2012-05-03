@@ -251,7 +251,7 @@ start_host_slave(void *data) {
 //                DPRINTF("MEM chunk\n");
                 for (i = 0; i < body->len; i++) {
                     len = ram_putbuf_block_slave(body->pages[i].addr, body->pages[i].ptr, 
-                                             body->pages[i].block, &comp_buf, s->mem_task_queue->iter_num, &actual_size);
+                                             body->pages[i].block, comp_buf + comp_pos, s->mem_task_queue->iter_num, &actual_size);
                     comp_pos += len;
                     s->mem_task_queue->slave_sent[s->id] += actual_size;
                 }

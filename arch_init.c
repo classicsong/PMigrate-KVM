@@ -276,12 +276,11 @@ unsigned long ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
                          struct FdMigrationStateSlave *s, int mem_vnum);
 unsigned long
 ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p, 
-                     Byte **f0, int mem_vnum, int *actual_size); 
+                     Byte *f, int mem_vnum, int *actual_size); 
 
 unsigned long
 ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p, 
-                     Byte **f0, int  mem_vnum, int *actual_size) {
-    Byte *f = *f0;
+                     Byte *f, int  mem_vnum, int *actual_size) {
     Byte *oldptr = f;
     unsigned long len;
     RAMBlock *block = (RAMBlock *)block_p;
