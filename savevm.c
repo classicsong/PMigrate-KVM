@@ -604,7 +604,6 @@ void qemu_file_put_notify(QEMUFile *f)
 void qemu_put_buffer(QEMUFile *f, const uint8_t *buf, int size)
 {
     int l;
-    DPRINTF("ENTER\n");
     if (!f->has_error && f->is_write == 0 && f->buf_index > 0) {
         fprintf(stderr,
                 "Attempted to write to buffer while read buffer is not empty\n");
@@ -623,7 +622,6 @@ void qemu_put_buffer(QEMUFile *f, const uint8_t *buf, int size)
         if (f->buf_index >= IO_BUF_SIZE)
             qemu_fflush(f);
     }
-    DPRINTF("EXIT\n");
 }
 
 void qemu_put_byte(QEMUFile *f, int v)
