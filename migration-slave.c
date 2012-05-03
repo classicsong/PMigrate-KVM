@@ -260,9 +260,11 @@ start_host_slave(void *data) {
                 compress2(comped_buf, &comped_len, comp_buf, comp_pos, COMPRESS_LEVEL);
                 DPRINTF("mem compressed: %d -> %d [%.2f]\n", comp_pos, comped_len, comped_len/(comp_pos + 0.0));
                 DPRINTF("%s\n", comped_buf);
+                DPRINTF("1\n");
                 qemu_put_be32(f, comped_len);
+                DPRINTF("2\n");
                 qemu_put_buffer(f, comped_buf, comped_len);
-                DPRINTF("OTL");
+                DPRINTF("3\n");
                 qemu_fflush(f);
                 comp_pos = 0;
                 free(body);
