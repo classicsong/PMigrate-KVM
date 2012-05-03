@@ -107,6 +107,12 @@
 #define ARP_PTYPE_IP 0x0800
 #define ARP_OP_REQUEST_REV 0x3
 
+extern __thread *decomp_ptr;
+extern __thread *decomped_ptr;
+extern __thread *decomp_buf;
+extern __thread *decomped_buf;
+
+
 static int announce_self_create(uint8_t *buf,
 				uint8_t *mac_addr)
 {
@@ -1959,12 +1965,6 @@ typedef QLIST_HEAD(migr_handler, LoadStateEntry) migr_handler;
                                                  
 void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers, 
                                       struct banner *banner, int fd, int compression);
-
-extern __thread *decomp_ptr;
-extern __thread *decomped_ptr;
-extern __thread *decomp_buf;
-extern __thread *decomped_buf;
-
 void 
 slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers, 
                                  struct banner *banner, int fd, int compression) {
