@@ -288,6 +288,8 @@ ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
     if (is_dup_page(p, *p)) {
         len = buf_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
                       RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
+        DPRINTF("SEND %lx",  offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
+                      RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
         f = &f[len];
         if (block) {
             len = buf_put_byte(f, strlen(block->idstr));
@@ -301,6 +303,8 @@ ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
         return &f[0] - &oldptr[0];
     } else {
         len = buf_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | RAM_SAVE_FLAG_PAGE | (mem_vnum << MEM_VNUM_OFFSET));
+        DPRINTF("SEND %lx",  offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
+                      RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
         f = &f[len];
         if (block) {
             len = buf_put_byte(f, strlen(block->idstr));
@@ -586,7 +590,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
             addr = qemu_get_be64(f);
         else
            addr = buf_get_be64(decomped_buf);
-             
+        DPRINTF("RECV: %lx", addr);
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 
