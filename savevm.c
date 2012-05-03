@@ -456,8 +456,8 @@ typedef unsigned char Byte;
 
 int buf_put_byte(Byte *f, int v)
 {
-    DPRINTF("DEBUG:%d\n",v);
     f[0] = (Byte )v;
+    DPRINTF("DEBUG:%d|%d\n",v, f[0]);
     return 1;
 
 }
