@@ -269,13 +269,13 @@ start_host_slave(void *data) {
                     s->mem_task_queue->slave_sent[s->id] += 
                         ram_save_block_slave(body->pages[i].addr, body->pages[i].ptr, 
                                              body->pages[i].block, s, s->mem_task_queue->iter_num);
-                }
-            }
-            /* End of the single task */
-            qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
-            qemu_fflush(f);
+                }            
+                /* End of the single task */
+                qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
+                qemu_fflush(f);
 
-            free(body);
+                free(body);
+            }
         }
         /* no disk and memory task */
         else {
