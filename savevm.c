@@ -1961,7 +1961,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
                 DPRINTF("READSIZE %d\n", comped_size);
                 decomp_size = COMPRESS_BUFSIZE;
                 uncompress(decomped_buf, &decomp_size, decomp_buf, comped_size);
-                DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, comped_size);
+                DPRINTF("receive compressed chunk %d -> %d\n", comped_size, decomp_size);
                 decomped_buf[decomp_size] = '\0';
                 DPRINTF("!!%s\n", decomped_buf);
             }
