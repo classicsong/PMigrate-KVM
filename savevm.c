@@ -476,9 +476,9 @@ int buf_put_be64(Byte *f, uint64_t v)
     return 8;
 }
 
-Byte buf_get_byte(Byte *f)
+int buf_get_byte(Byte *f)
 {
-    Byte result = *f;
+    int result = f[0];
     f = &f[1];    
     return result;
 
@@ -1997,6 +1997,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
                 decomped_size = COMPRESS_BUFSIZE;
                 uncompress(decomped_buf, &decomped_size, decomp_buf, decomp_size);
                 DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, decomped_size);
+                DPRINTF("%lx", &decomped_buf[0]);
                 ret = vmstate_load(f, le->se, le->version_id, &decomped_buf[0]);
                 if (ret < 0) {
                     fprintf(stderr, "qemu: warning: error while loading compressed state section id %d\n", section_id);
