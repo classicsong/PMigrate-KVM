@@ -1127,7 +1127,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
     int nr_sectors;
     int iter_num;
 
-    if (decomped_buf != NULL)
+//    if (decomped_buf != NULL)
        DPRINTF("Entering block_load %8x\n", decomped_buf);
     /*
      * at the initialization, the block_load will receive a BLK_MIG_FLAG_EOS

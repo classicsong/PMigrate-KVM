@@ -198,7 +198,6 @@ start_host_slave(void *data) {
      */
     while (1) {
         void *body_p;
-        DPRINTF(">>>\n");
         /* check for disk */
         if (queue_pop_task(s->disk_task_queue, &body_p) > 0) {
             body = (struct task_body *)body_p;
