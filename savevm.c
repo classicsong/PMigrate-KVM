@@ -604,11 +604,11 @@ void qemu_file_put_notify(QEMUFile *f)
 void qemu_put_buffer(QEMUFile *f, const uint8_t *buf, int size)
 {
     int l;
-
+    DPRINTF("ENTER\n");
     if (!f->has_error && f->is_write == 0 && f->buf_index > 0) {
         fprintf(stderr,
                 "Attempted to write to buffer while read buffer is not empty\n");
-        abort();
+        abort();       
     }
 
     while (!f->has_error && size > 0) {
@@ -623,6 +623,7 @@ void qemu_put_buffer(QEMUFile *f, const uint8_t *buf, int size)
         if (f->buf_index >= IO_BUF_SIZE)
             qemu_fflush(f);
     }
+    DPRINTF("EXIT\n");
 }
 
 void qemu_put_byte(QEMUFile *f, int v)
@@ -1991,6 +1992,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
             }
 
             if(compression && section_type == QEMU_VM_SECTION_PART){
+                DPRINTF("wtf\n");
                 decomp_size = qemu_get_be32(f);
                 qemu_get_buffer(f, (uint8_t *)decomp_buf, decomp_size);
                 decomp_buf[decomp_size] = '\0';
