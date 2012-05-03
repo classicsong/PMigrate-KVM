@@ -264,6 +264,7 @@ start_host_slave(void *data) {
                 qemu_fflush(f);
                 comp_pos = 0;
                 free(body);
+                DPRINTF("SENT CHUNK\n");
             }else{
                 for (i = 0; i < body->len; i++) {
                     s->mem_task_queue->slave_sent[s->id] += 

@@ -457,7 +457,6 @@ typedef unsigned char Byte;
 int buf_put_byte(Byte *f, int v)
 {
     f[0] = (Byte )v;
-    printf("%2x\\", f[0]);
     return 1;
 
 }
