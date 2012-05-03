@@ -155,7 +155,7 @@ static int ram_save_block(QEMUFile *f)
             p = block->host + offset;
 
             if (is_dup_page(p, *p)) {
-                DPRINTF("putbe64%8x\n",  offset | cont | RAM_SAVE_FLAG_COMPRESS);
+//                DPRINTF("putbe64%8x\n",  offset | cont | RAM_SAVE_FLAG_COMPRESS);
                 qemu_put_be64(f, offset | cont | RAM_SAVE_FLAG_COMPRESS);
                 if (!cont) {
                     qemu_put_byte(f, strlen(block->idstr));
@@ -165,7 +165,7 @@ static int ram_save_block(QEMUFile *f)
                 qemu_put_byte(f, *p);
                 bytes_sent = 1;
             } else {
-                DPRINTF("putbe64%8x\n",  offset | cont | RAM_SAVE_FLAG_PAGE);
+//                DPRINTF("putbe64%8x\n",  offset | cont | RAM_SAVE_FLAG_PAGE);
                 qemu_put_be64(f, offset | cont | RAM_SAVE_FLAG_PAGE);
                 if (!cont) {
                     qemu_put_byte(f, strlen(block->idstr));
@@ -291,7 +291,9 @@ ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
     if (is_dup_page(p, *p)) {
         len = buf_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
                       RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
-        f = &f[len];
+    DPRINTF("putbe64 %lx\n",offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
+                      RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
+    f = &f[len];
         if (block) {
             len = buf_put_byte(f, strlen(block->idstr));
             f = &f[len];
