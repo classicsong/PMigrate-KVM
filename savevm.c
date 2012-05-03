@@ -1996,7 +1996,11 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
                 decomped_size = COMPRESS_BUFSIZE;
                 uncompress(decomped_buf, &decomped_size, decomp_buf, decomp_size);
                 DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, decomped_size);
-
+                ret = vmstate_load(f, le->se, le->version_id, &decomped_buf[0]);
+                if (ret < 0) {
+                    fprintf(stderr, "qemu: warning: error while loading compressed state section id %d\n", section_id);
+                    goto out;
+                }
             }else{                
                 /*
                  * ram use ram_load
