@@ -155,6 +155,7 @@ static int ram_save_block(QEMUFile *f)
             p = block->host + offset;
 
             if (is_dup_page(p, *p)) {
+                DPRINTF("putbe64%8x\n",  offset | cont | RAM_SAVE_FLAG_COMPRESS);
                 qemu_put_be64(f, offset | cont | RAM_SAVE_FLAG_COMPRESS);
                 if (!cont) {
                     qemu_put_byte(f, strlen(block->idstr));
@@ -164,6 +165,7 @@ static int ram_save_block(QEMUFile *f)
                 qemu_put_byte(f, *p);
                 bytes_sent = 1;
             } else {
+                DPRINTF("putbe64%8x\n",  offset | cont | RAM_SAVE_FLAG_PAGE);
                 qemu_put_be64(f, offset | cont | RAM_SAVE_FLAG_PAGE);
                 if (!cont) {
                     qemu_put_byte(f, strlen(block->idstr));
@@ -586,6 +588,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             addr = qemu_get_be64(f);
         else
            addr = buf_get_be64(decomped_buf);
+        DPRINTF("getbe64 %8x\n", addr);
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 
