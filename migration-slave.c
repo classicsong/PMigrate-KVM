@@ -210,7 +210,7 @@ start_host_slave(void *data) {
                                                   body->iter_num, comp_buf + comp_pos);
                     comp_pos += len;
                     s->disk_task_queue->slave_sent[s->id] += BLOCK_SIZE;
-                    DPRINTF("put_block %d\n", len);
+                    DPRINTF("put_block %d\n", comp_pos);
                 }
                 comp_pos += buf_put_be64(f, BLK_MIG_FLAG_EOS);
                 compress2(comped_buf, &comped_len, comp_buf, comp_pos, Z_DEFAULT_COMPRESSION);
