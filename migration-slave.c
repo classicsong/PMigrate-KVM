@@ -126,7 +126,7 @@ start_host_slave(void *data) {
     QEMUFile *f;
     struct timespec slave_sleep = {0, 1000000};
     unsigned long data_sent;
-    char *comp_buf, *comped_buf;
+    Bytef *comp_buf, *comped_buf;
     int comp_pos, len, comped_len;
     
     if (parse_host_port(&addr, s->dest_ip) < 0) {
@@ -147,8 +147,8 @@ start_host_slave(void *data) {
     
 
     if (s->compression){
-       comp_buf = (char *)malloc(COMPRESS_BUFSIZE);
-       comped_buf = (char *)malloc(COMPRESS_BUFSIZE);
+       comp_buf = (Bytef *)malloc(COMPRESS_BUFSIZE);
+       comped_buf = (Bytef *)malloc(COMPRESS_BUFSIZE);
     }
 
     //socket_set_nonblock(s->fd);
@@ -213,8 +213,9 @@ start_host_slave(void *data) {
                     DPRINTF("put_block %d\n", comp_pos);
                 }
                 comp_pos += buf_put_be64(f, BLK_MIG_FLAG_EOS);
-                compress2(comped_buf, &comped_len, comp_buf, comp_pos, Z_DEFAULT_COMPRESSION);
+                compress2(comped_buf, &comped_len, comp_buf, comp_pos, 5);
                 DPRINTF("compressed: %d -> %d [%f]\n", comp_pos, comped_len, comped_len/comp_pos);
+                comp_pos = 0;
                 //qemu_fflush(f);
                 //free(body);
             }else{          
