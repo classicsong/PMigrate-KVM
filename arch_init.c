@@ -165,7 +165,7 @@ static int ram_save_block(QEMUFile *f)
                 qemu_put_byte(f, *p);
                 bytes_sent = 1;
             } else {
-//                DPRINTF("putbe64%8x\n",  offset | cont | RAM_SAVE_FLAG_PAGE);
+                DPRINTF("putbe64%8x\n",  offset | cont | RAM_SAVE_FLAG_PAGE);
                 qemu_put_be64(f, offset | cont | RAM_SAVE_FLAG_PAGE);
                 if (!cont) {
                     qemu_put_byte(f, strlen(block->idstr));
