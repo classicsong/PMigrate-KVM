@@ -478,6 +478,7 @@ int buf_put_be64(Byte *f, uint64_t v)
 
 int buf_get_byte(Byte *f)
 {
+    DPRINTF("SHOULDN'T HAPPEN\n");
     int result = f[0];
     f = &f[1];    
     return result;
