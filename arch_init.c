@@ -289,6 +289,7 @@ ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
         len = buf_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
                       RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
         f = &f[len];
+        DPRINTF("REACHED\n");
         if (block) {
             len = buf_put_byte(f, strlen(block->idstr));
             f = &f[len];
