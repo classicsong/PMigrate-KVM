@@ -212,9 +212,8 @@ start_host_slave(void *data) {
             qemu_put_be32(f, s->disk_task_queue->section_id);
 
             if (s->compression){
-                DPRINTF("BLOCK chunk\n");
-                for (i = 0; i < body->len; i++) {
-                    DPRINTF("sent = %lx", s->disk_task_queue->slave_sent[s->id]);
+//                DPRINTF("BLOCK chunk\n");
+                for (i = 0; i < body->len; i++) { 
                     s->disk_task_queue->slave_sent[s->id] += disk_putbuf_block_slave(body->blocks[i].ptr,
                                                   body->iter_num);
                 }
@@ -225,11 +224,11 @@ start_host_slave(void *data) {
                 qemu_put_be32(f, comped_len);
                 qemu_put_buffer(f, comped_buf, comped_len); 
                 qemu_fflush(f);
-                DPRINTF("PACKED HEAD:\n");
+/*                DPRINTF("PACKED HEAD:\n");
                 int j;
                 for (j = 0; j < 100; j++)
                     printf("%x|", comp_buf[j]);
-                printf("\n");
+                printf("\n"); */
                 comp_buf = comp_ptr;
                 free(body);
             }else{          
@@ -260,25 +259,22 @@ start_host_slave(void *data) {
             qemu_put_byte(f, QEMU_VM_SECTION_PART);
             qemu_put_be32(f, s->mem_task_queue->section_id);
             if(s->compression){
-                DPRINTF("MEM chunk\n");
                 for (i = 0; i < body->len; i++) {
-                    DPRINTF("MEM bufptr = %8x, len = %8x\n", comp_buf);
                     s->mem_task_queue->slave_sent[s->id] += ram_putbuf_block_slave(body->pages[i].addr, body->pages[i].ptr, 
                                              body->pages[i].block, s->mem_task_queue->iter_num);
                 }                
                 buf_put_be64(RAM_SAVE_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
-                DPRINTF("length :%lx",  &comp_buf[0] - &comp_ptr[0]);
                 compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
                 DPRINTF("mem compressed: %d -> %d\n", &comp_buf[0] -&comp_ptr[0],  comped_len);
                 qemu_put_be32(f, comped_len);
                 qemu_put_buffer(f, comped_buf, comped_len);
                 qemu_fflush(f);
-                DPRINTF("PACKED HEAD:\n");
+/*                DPRINTF("PACKED HEAD:\n");
                 int j;
                 for (j = 0; j < 100; j++)
                     printf("%x|", comp_buf[j]);
-                printf("\n");               
+                printf("\n");               */
                 comp_buf = &comp_ptr[0];
                 free(body);
             }else{

@@ -543,7 +543,7 @@ static inline void *host_from_buffer_offset(ram_addr_t offset,
     buf_get_buffer((uint8_t *)id, len);
     id[len] = 0;
 
-    DPRINTF("dev:[%d] %s\n",len, id);
+//    DPRINTF("dev:[%d] %s\n",len, id);
     int j;
     for (j = 0; j < len; j++)
         printf("%x|", id[j]);

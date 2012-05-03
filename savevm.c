@@ -1532,7 +1532,7 @@ extern int ram_load(QEMUFile *f, void *opaque, int version_id);
 static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id)
 {
 
-    DPRINTF("%d  %d  %d, %x\n", !se->vmsd, se->load_state, ram_load, se->load_state);
+//    DPRINTF("%d  %d  %d, %x\n", !se->vmsd, se->load_state, ram_load, se->load_state);
     if (!se->vmsd) {         /* Old style */
         //classicsong change it
         if (se->load_state == ram_load) {
@@ -1642,7 +1642,7 @@ qemu_migrate_savevm_state_begin(void *opaque, Monitor *mon, QEMUFile *f,
         if (se->save_live_state == NULL)
             continue;
 
-        DPRINTF("handle se->section_id %d\n", se->section_id);
+    //    DPRINTF("handle se->section_id %d\n", se->section_id);
         /* Section type */
         qemu_put_byte(f, QEMU_VM_SECTION_START);
         qemu_put_be32(f, se->section_id);
@@ -1990,7 +1990,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
         /*
          * start modifying here tomorrow
          */
-        DPRINTF("get incomming commands %d\n", section_type);
+//        DPRINTF("get incomming commands %d\n", section_type);
         switch (section_type) {
         case QEMU_VM_SECTION_PART:
         case QEMU_VM_SECTION_END:
@@ -2016,12 +2016,12 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
                 uncompress(decomped_ptr, &decomped_size, decomp_buf, decomp_size);
                 decomped_buf = decomped_ptr;
                 DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, decomped_size);
-                DPRINTF("unit size : %d\n", sizeof(decomped_ptr[0]));
+/*
                 DPRINTF("UNPACKED HEAD:\n");
                 int j;
                 for (j = 0; j < 100; j++)
                     printf("%2x|", decomped_ptr[j]);
-                printf("\n");
+                printf("\n");*/
                 ret = vmstate_load(f, le->se, le->version_id);
                 if (ret < 0) {
                     fprintf(stderr, "qemu: warning: error while loading compressed state section id %d\n", section_id);
