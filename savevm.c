@@ -1931,8 +1931,8 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
     uint8_t section_type;
     uint32_t section_id;
     int ret;
-    int decomp_size;
-    long  comped_size;
+    long decomp_size;
+    long  decomped_size;
 
     while ((section_type = qemu_get_byte(f)) != QEMU_VM_EOF) {
         /*
@@ -1957,13 +1957,13 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
             }
 
             if(compression && section_type == QEMU_VM_SECTION_PART){
-                comped_size = qemu_get_be32(f);
-                qemu_get_buffer(f, (uint8_t *)decomp_buf, comped_size);
-                DPRINTF("## %s\n", decomp_buf);
-                decomp_size = COMPRESS_BUFSIZE;
-                uncompress(decomped_buf, &decomp_size, decomp_buf, comped_size);
-                DPRINTF("receive compressed chunk %d -> %d\n", comped_size, decomp_size);
-                decomped_buf[decomp_size] = '\0';
+                decomp_size = qemu_get_be32(f);
+                qemu_get_buffer(f, (uint8_t *)decomp_buf, decomp_size);
+                decomp_buf[decomp_size] = '\0';
+                decomped_size = COMPRESS_BUFSIZE;
+                uncompress(decomped_buf, &decomped_size, decomp_buf, decomp_size);
+                DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, decomped_size);
+                decomped_buf[100] = '\0';
                 DPRINTF("!!%s\n", decomped_buf);
             }
                 
