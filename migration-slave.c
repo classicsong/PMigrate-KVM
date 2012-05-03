@@ -268,6 +268,7 @@ start_host_slave(void *data) {
                 qemu_put_be32(f, comped_len);
                 int j;
                 for (i = 0; i < comped_len; i++){
+                    DPRINTF("%d|", i);
                     if (comped_buf[i]> 0)
                         j++;
                 }
