@@ -223,6 +223,8 @@ start_host_slave(void *data) {
                 qemu_put_be32(f, comped_len);
                 qemu_put_buffer(f, comped_buf, comped_len); 
                 qemu_fflush(f);
+                comp_buf[100] = '\0';
+                DPRINTF("PACKED HEAD:%s\n", comp_buf);
                 comp_pos = 0;
                 free(body);
             }else{          
@@ -255,7 +257,7 @@ start_host_slave(void *data) {
             if(s->compression){
 //                DPRINTF("MEM chunk\n");
                 for (i = 0; i < body->len; i++) {
-                    DPRINTF("MEM bufptr = %8x, len = %8x\n", comp_buf, comp_pos);
+            //        DPRINTF("MEM bufptr = %8x, len = %8x\n", comp_buf, comp_pos);
                     len = ram_putbuf_block_slave(body->pages[i].addr, body->pages[i].ptr, 
                                              body->pages[i].block, comp_buf + comp_pos, s->mem_task_queue->iter_num, &actual_size);
                     comp_pos += len;
