@@ -623,11 +623,13 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                         qemu_get_buffer(f, (uint8_t *)id, len);
                         id[len] = 0;
                         length = qemu_get_be64(f);
+                        DPRINTF("get length %lx", length);
                     }else{
                         len = buf_get_byte(decomped_buf);
                         buf_get_buffer(decomped_buf, (uint8_t *)id, len);
                         id[len] = 0;
                         length = buf_get_be64(decomped_buf);
+                        DPRINTF("get length %lx", length);
                     }
 
                     DPRINTF("memory id %s\n", id);
@@ -671,7 +673,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             volatile uint32_t *vnum_p;
             unsigned long index = 0;
 
-            //DPRINTF("handle compress\n");
+            DPRINTF("handle compress\n");
             if (version_id == 3)
                 host = qemu_get_ram_ptr(addr);
             else
@@ -746,7 +748,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             volatile uint32_t *vnum_p;
             unsigned long index = 0;
 
-            //DPRINTF("handle normal page\n");
+            DPRINTF("handle normal page\n");
             if (version_id == 3){
                 DPRINTF("calling qemu_get_ram_ptr();\n");
                 host = qemu_get_ram_ptr(addr);
