@@ -165,7 +165,7 @@ static int ram_save_block(QEMUFile *f)
                 qemu_put_byte(f, *p);
                 bytes_sent = 1;
             } else {
-                DPRINTF("putbe64%8x\n",  offset | cont | RAM_SAVE_FLAG_PAGE);
+//                DPRINTF("putbe64%8x\n",  offset | cont | RAM_SAVE_FLAG_PAGE);
                 qemu_put_be64(f, offset | cont | RAM_SAVE_FLAG_PAGE);
                 if (!cont) {
                     qemu_put_byte(f, strlen(block->idstr));
@@ -592,9 +592,9 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 
-        DPRINTF("se is %p, flags %x\n", se, flags);
-        DPRINTF("se version queue is %p\n", se->version_queue);
-        DPRINTF("addr is %lx:%lx, flags %x\n", addr, addr / TARGET_PAGE_SIZE, flags);
+//        DPRINTF("se is %p, flags %x\n", se, flags);
+//        DPRINTF("se version queue is %p\n", se->version_queue);
+//        DPRINTF("addr is %lx:%lx, flags %x\n", addr, addr / TARGET_PAGE_SIZE, flags);
         if (flags & RAM_SAVE_FLAG_MEM_SIZE) {
             /*
              * classicsong add version queue for memory

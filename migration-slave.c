@@ -285,7 +285,7 @@ start_host_slave(void *data) {
                 /* End of the single task */
                 qemu_put_be64(f, RAM_SAVE_FLAG_EOS);
                 qemu_fflush(f);
-                //free(body);
+                free(body);
             }
         }
         /* no disk and memory task */
