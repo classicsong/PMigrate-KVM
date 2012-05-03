@@ -2005,10 +2005,11 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
                 uncompress(decomped_ptr, &decomped_size, decomp_buf, decomp_size);
                 decomped_buf = decomped_ptr;
                 DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, decomped_size);
+                DPRINTF("unit size : %d\n", sizeof(decomped_ptr[0]));
                 DPRINTF("UNPACKED HEAD:\n");
                 int j;
                 for (j = 0; j < 100; j++)
-                    printf("%x|", decomped_ptr[j]);
+                    printf("%2x|", decomped_ptr[j]);
                 printf("\n");
                 ret = vmstate_load(f, le->se, le->version_id);
                 if (ret < 0) {
