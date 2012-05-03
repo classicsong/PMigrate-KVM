@@ -582,7 +582,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
         return -EINVAL;
     }
    
-    DPRINTF("DEBUG: %lx", decomp_buf);
+    DPRINTF("DEBUG: %lx", decomped_buf);
     if(decomped_buf)
         DPRINTF("handle uncompressed payload\n");
 
