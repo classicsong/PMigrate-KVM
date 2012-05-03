@@ -213,7 +213,7 @@ start_host_slave(void *data) {
                 }
                 comp_pos += buf_put_be64(f, BLK_MIG_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
-                for ( i = 0 ; i < comp_pos, i++)
+                for (i = 0 ;i < comp_pos; i++)
                     printf("%2x|", comp_buf[i]);
                 compress2(comped_buf, &comped_len, comp_buf, comp_pos, COMPRESS_LEVEL);
                 DPRINTF("disk compressed: %d -> %d [%.2f]\n", comp_pos, comped_len, comped_len/(comp_pos + 0.0));
