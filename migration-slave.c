@@ -269,6 +269,7 @@ start_host_slave(void *data) {
                 int j;
                 for (i = 0; i < comped_len - 8; i++){
                     printf("%d|", i);
+                    fflush(stdout);
                     if (comped_buf[i]> 0)
                         j++;
                 }
