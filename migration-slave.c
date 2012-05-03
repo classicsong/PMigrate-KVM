@@ -30,6 +30,7 @@ tcp_start_outgoing_migration_slave(Monitor *mon,
 void * start_host_slave(void *data);
 void init_host_slaves(struct FdMigrationState *s);
 void *start_dest_slave(void *data);
+Byte __thread *decomp_buf, *decomped_buf;
 
 
 static int socket_errno_slave(FdMigrationStateSlave *s) {
@@ -372,6 +373,7 @@ struct dest_slave_para{
 //    return -1;
 //}
 
+
 extern void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers, struct banner *banner, int fd, int compression, Byte *decomp_buf, Byte *decomped_buf);
 
 void *start_dest_slave(void *data) {
@@ -382,7 +384,6 @@ void *start_dest_slave(void *data) {
     int fd;
     int con_fd;
     int val;
-    Byte *decomp_buf, *decomped_buf;
     QEMUFile *f;
 
     if (parse_host_port(&addr, para->listen_ip) < 0) {

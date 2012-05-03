@@ -1512,7 +1512,7 @@ void vmstate_save_state(QEMUFile *f, const VMStateDescription *vmsd,
 
 extern int ram_load(QEMUFile *f, void *opaque, int version_id);
 
-static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id, Byte *decomp_buf)
+static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id)
 {
 
     DPRINTF("%d  %d  %d, %x\n", !se->vmsd, se->load_state, ram_load, se->load_state);
@@ -1522,9 +1522,9 @@ static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id, Byte *d
             return se->load_state(f, se, version_id);
         }
         
-        return se->load_state(f, se->opaque, version_id, decomp_buf);
+        return se->load_state(f, se->opaque, version_id);
     }
-    return vmstate_load_state(f, se->vmsd, se->opaque, decomp_buf);
+    return vmstate_load_state(f, se->vmsd, se->opaque, version_id);
 }
 
 static void vmstate_save(QEMUFile *f, SaveStateEntry *se)
@@ -1999,7 +1999,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
                 uncompress(decomped_buf, &decomped_size, decomp_buf, decomp_size);
                 DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, decomped_size);
                 DPRINTF("%lx", &decomped_buf[0]);
-                ret = vmstate_load(f, le->se, le->version_id, &decomped_buf[0]);
+                ret = vmstate_load(f, le->se, le->version_id);
                 if (ret < 0) {
                     fprintf(stderr, "qemu: warning: error while loading compressed state section id %d\n", section_id);
                     goto out;
@@ -2009,7 +2009,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
                  * ram use ram_load
                  * disk use block_load
                  */
-                ret = vmstate_load(f, le->se, le->version_id, NULL);
+                ret = vmstate_load(f, le->se, le->version_id);
                 if (ret < 0) {
                     fprintf(stderr, "qemu: warning: error while loading state section id %d\n",
                             section_id);
@@ -2117,7 +2117,7 @@ int qemu_loadvm_state(QEMUFile *f)
             le->version_id = version_id;
             QLIST_INSERT_HEAD(&loadvm_handlers, le, entry);
 
-            ret = vmstate_load(f, se, le->version_id, NULL);
+            ret = vmstate_load(f, se, le->version_id);
             if (ret < 0) {
                 fprintf(stderr, "qemu: warning: error while loading state for instance 0x%x of device '%s'\n",
                         instance_id, idstr);
@@ -2139,7 +2139,7 @@ int qemu_loadvm_state(QEMUFile *f)
                 goto out;
             }
 
-            ret = vmstate_load(f, le->se, le->version_id, NULL);
+            ret = vmstate_load(f, le->se, le->version_id);
             if (ret < 0) {
                 fprintf(stderr, "qemu: warning: error while loading state section id %d\n",
                         section_id);
