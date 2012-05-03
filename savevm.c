@@ -476,38 +476,36 @@ int buf_put_be64(Byte *f, uint64_t v)
     return 8;
 }
 
-int buf_get_byte(Byte *f)
+int buf_get_byte()
 {
-    f = &decomped_buf;
-    DPRINTF("GET VALUE FROM %x VALUES %d\n", &f[0], f[0]);
-    int result = f[0];
+    int result = decomped_buf[0];
     decomped_buf = &decomped_buf[1];
     return result;
 
 }
 
-unsigned int buf_get_be32(Byte *f)
+unsigned int buf_get_be32()
 {
     unsigned int v;
-    v = buf_get_byte(f) << 24;
-    v |= buf_get_byte(f) << 16;
-    v |= buf_get_byte(f) << 8;
-    v |= buf_get_byte(f);
+    v = buf_get_byte() << 24;
+    v |= buf_get_byte() << 16;
+    v |= buf_get_byte() << 8;
+    v |= buf_get_byte();
     return v;
 }
 
-int buf_get_buffer(QEMUFile *f, uint8_t *buf, int size1)
+int buf_get_buffer( uint8_t *buf, int size1)
 {
     memcpy(buf, decomped_buf, size1);
     decomped_buf = &decomped_buf[size1];
     return 1;
 }
 
-uint64_t buf_get_be64(Byte *f)
+uint64_t buf_get_be64()
 {
     uint64_t v;
-    v = (uint64_t)buf_get_be32(f) << 32;
-    v |= buf_get_be32(f);
+    v = (uint64_t)buf_get_be32() << 32;
+    v |= buf_get_be32();
     return v;
 }
 

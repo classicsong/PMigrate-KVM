@@ -589,7 +589,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
         if(decomped_buf == NULL)
             addr = qemu_get_be64(f);
         else
-           addr = buf_get_be64(decomped_buf);
+           addr = buf_get_be64();
         DPRINTF("getbe64 %8x\n", addr);
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
@@ -629,10 +629,10 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                         id[len] = 0;
                         length = qemu_get_be64(f);
                     }else{
-                        len = buf_get_byte(decomped_buf);
-                        buf_get_buffer(decomped_buf, (uint8_t *)id, len);
+                        len = buf_get_byte();
+                        buf_get_buffer((uint8_t *)id, len);
                         id[len] = 0;
-                        length = buf_get_be64(decomped_buf);
+                        length = buf_get_be64();
                     }
                     DPRINTF("get length %lx", length);
 
@@ -716,7 +716,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 if (decomped_buf == NULL)
                     ch = qemu_get_byte(f);
                 else
-                    ch = buf_get_byte(decomped_buf);
+                    ch = buf_get_byte();
                 DPRINTF("skip page patch %d, %d\n", curr_vnum, mem_vnum*2);
                 goto end;
             }
@@ -731,7 +731,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             if (decomped_buf == NULL)                
                 ch = qemu_get_byte(f);
             else
-                ch = buf_get_byte(decomped_buf);
+                ch = buf_get_byte();
 
             memset(host, ch, TARGET_PAGE_SIZE);
 #ifndef _WIN32
@@ -791,7 +791,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 if (decomped_buf == NULL)
                     qemu_get_buffer(f, buf, TARGET_PAGE_SIZE);
                 else
-                    buf_get_buffer(decomped_buf, buf, TARGET_PAGE_SIZE);
+                    buf_get_buffer(buf, TARGET_PAGE_SIZE);
                 DPRINTF("skip page patch %d, %d\n", curr_vnum, mem_vnum * 2);
                 goto end;
             }
@@ -807,7 +807,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             if (decomped_buf == NULL)
                 qemu_get_buffer(f, host, TARGET_PAGE_SIZE);
             else
-                buf_get_buffer(decomped_buf, host, TARGET_PAGE_SIZE);
+                buf_get_buffer(host, TARGET_PAGE_SIZE);
 
             /*
              * now we release the page

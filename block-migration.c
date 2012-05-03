@@ -1136,7 +1136,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
         if (decomped_buf == NULL)
             addr = qemu_get_be64(f);
         else
-            addr = buf_get_be64(decomped_buf);
+            addr = buf_get_be64();
         flags = addr & ~BDRV_SECTOR_MASK;
         addr >>= BDRV_SECTOR_BITS;
 
@@ -1162,8 +1162,8 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
                 qemu_get_buffer(f, (uint8_t *)device_name, len);
                 device_name[len] = '\0';
             }else{
-                len = buf_get_byte(f);
-                buf_get_buffer(decomped_buf, (uint8_t *)device_name, len);
+                len = buf_get_byte();
+                buf_get_buffer( (uint8_t *)device_name, len);
                 device_name[len] = '\0';
                 DPRINTF("[DEV]%s\n", device_name);  
             }
@@ -1198,7 +1198,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
             if(decomped_buf == NULL)
                 qemu_get_buffer(f, buf, BLOCK_SIZE);
             else
-                buf_get_buffer(decomped_buf, buf, BLOCK_SIZE);
+                buf_get_buffer(buf, BLOCK_SIZE);
 
             /*
         re_check_nor:
@@ -1255,8 +1255,8 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
                 qemu_get_buffer(f, (uint8_t *)device_name, len);
                 device_name[len] = '\0';
             }else{
-                len = buf_get_byte(decomped_buf);
-                buf_get_buffer(decomped_buf, (uint32_t *)device_name, len);
+                len = buf_get_byte();
+                buf_get_buffer((uint32_t *)device_name, len);
                 device_name[len] = '\0';
                 DPRINTF("[DEV]%s\n",device_name);
             }
@@ -1270,7 +1270,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
             if (decomped_buf == NULL)
                 total_sectors = qemu_get_be64(f);
             else
-                total_sectors = buf_get_be64(decomped_buf);
+                total_sectors = buf_get_be64();
             DPRINTF("NEGOTIATE disk bs %s, size %ld\n", device_name, total_sectors);
 
             bs->version_queue = (uint32_t *)calloc(total_sectors, sizeof(uint32_t));
