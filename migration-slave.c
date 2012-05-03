@@ -306,8 +306,8 @@ start_host_slave(void *data) {
         }
     }
     if (s->compression){
-        free(comp_buf);
-        free(comped_buf);
+//        free(comp_buf);
+//        free(comped_buf);
     }
         
     DPRINTF("slave terminate\n");
@@ -447,8 +447,8 @@ void *start_dest_slave(void *data) {
     //slave_loadvm_state();
 
     if(para->compression){
-        free(decomp_buf);
-        free(decomped_buf);        
+//        free(decomp_buf);
+//        free(decomped_buf);        
     }
  err2:
     close(con_fd);
