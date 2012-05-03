@@ -213,7 +213,7 @@ start_host_slave(void *data) {
                     DPRINTF("put_block %d\n", comp_pos);
                 }
                 comp_pos += buf_put_be64(f, BLK_MIG_FLAG_EOS);
-                comp_len = COMPRESS_BUFSIZE;
+                comped_len = COMPRESS_BUFSIZE;
                 compress2(comped_buf, &comped_len, comp_buf, comp_pos, Z_DEFAULT_COMPRESSION);
                 DPRINTF("compressed: %d -> %d [%f]\n", comp_pos, comped_len, comped_len/comp_pos);
                 comp_pos = 0;
