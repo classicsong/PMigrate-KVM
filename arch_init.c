@@ -533,7 +533,41 @@ int ram_save_live(Monitor *mon, QEMUFile *f, int stage, void *opaque) //opaque i
     DPRINTF("Only stage one can reach this function\n");
     return -1;
 }
+static inline void *host_from_buffer_offset(ram_addr_t offset,
+                                            int flags,
+                                            unsigned long *index)
+{
+    static __thread RAMBlock *block = NULL;
+    //static RAMBlock *block = NULL;
+    char id[256];
+    uint8_t len;
 
+    if (flags & RAM_SAVE_FLAG_CONTINUE) {
+        if (!block) {
+            fprintf(stderr, "Ack, bad migration stream!\n");
+            return NULL;
+        }
+
+        *index = (block->offset + offset) / TARGET_PAGE_SIZE;
+        return block->host + offset;
+    }
+
+    len = buf_get_byte();
+    buf_get_buffer((uint8_t *)id, len);
+    id[len] = 0;
+
+    QLIST_FOREACH(block, &ram_list.blocks, next) {
+        if (!strncmp(id, block->idstr, sizeof(id))) {
+            //DPRINTF("block host %p, block length %lx, %lx\n", block->host, block->length, 
+		    //block->offset + offset);
+            *index = (block->offset + offset) / TARGET_PAGE_SIZE;
+            return block->host + offset;
+        }
+    }
+
+    fprintf(stderr, "Can't find block %s!\n", id);
+    return NULL;
+}
 static inline void *host_from_stream_offset(QEMUFile *f,
                                             ram_addr_t offset,
                                             int flags,
@@ -590,7 +624,6 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             addr = qemu_get_be64(f);
         else
            addr = buf_get_be64();
-        DPRINTF("getbe64 %8x\n", addr);
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 
@@ -680,8 +713,12 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             DPRINTF("handle compress\n");
             if (version_id == 3)
                 host = qemu_get_ram_ptr(addr);
-            else
-                host = host_from_stream_offset(f, addr, flags, &index);
+            else{
+                if (decomped_buf)
+                    host = host_from_buffer_offset(addr, flags, &index);
+                else
+                    host = host_from_stream_offset(f, addr, flags, &index);
+            }
             if (!host) {
                 return -EINVAL;
             }
@@ -757,8 +794,12 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                 DPRINTF("calling qemu_get_ram_ptr();\n");
                 host = qemu_get_ram_ptr(addr);
             }else
-	        host = host_from_stream_offset(f, addr, flags, &index);
-
+            {
+                if (decomped_buf)
+                    host = host_from_buffer_offset(addr, flags, &index);
+                else
+	                host = host_from_stream_offset(f, addr, flags, &index);
+            }
             if (se->total_size < (addr / TARGET_PAGE_SIZE))
                 fprintf(stderr, "error host memory addr %lx; %lx\n", se->total_size, addr / TARGET_PAGE_SIZE);
 
