@@ -263,11 +263,11 @@ start_host_slave(void *data) {
                 }                
                 comp_pos += buf_put_be64(f, RAM_SAVE_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
-                compress2(comped_buf, &comped_len, comp_buf, comp_pos, COMPRESS_LEVEL);
+                compress2(comped_buf, &comped_len, comp_buf, comp_pos, COMPRESS_LEVEL);                
                 DPRINTF("mem compressed: %d -> %d [%.2f]\n", comp_pos, comped_len, comped_len/(comp_pos + 0.0));
                 qemu_put_be32(f, comped_len);
                 int j;
-                for (i = 0; i < comped_len; i++){
+                for (i = 0; i < comped_len - 8; i++){
                     printf("%d|", i);
                     if (comped_buf[i]> 0)
                         j++;
