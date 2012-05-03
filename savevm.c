@@ -486,6 +486,7 @@ int buf_get_byte()
 {
     int result = decomped_buf[0];
     decomped_buf = &decomped_buf[1];
+    DPRINTF("RESULT:%x", result);
     return result;
 
 }
