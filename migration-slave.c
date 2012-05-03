@@ -255,7 +255,7 @@ start_host_slave(void *data) {
             if(s->compression){
 //                DPRINTF("MEM chunk\n");
                 for (i = 0; i < body->len; i++) {
-                    DPRINTF("MEM bufptr = %8x, len = %8x\n", comp_pos, comp_pos);
+                    DPRINTF("MEM bufptr = %8x, len = %8x\n", comp_buf, comp_pos);
                     len = ram_putbuf_block_slave(body->pages[i].addr, body->pages[i].ptr, 
                                              body->pages[i].block, comp_buf + comp_pos, s->mem_task_queue->iter_num, &actual_size);
                     comp_pos += len;
