@@ -579,8 +579,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
         return -EINVAL;
     }
    
-    if(decomped_buf)
-        DPRINTF("handle uncompressed payload\n");
+   DPRINTF("handle payload %x\n", decomped_buf);
 
     do {
         if(decomped_buf == NULL)
@@ -590,9 +589,9 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
         flags = addr & ~TARGET_PAGE_MASK;
         addr &= TARGET_PAGE_MASK;
 
-        //DPRINTF("se is %p, flags %x\n", se, flags);
-        //DPRINTF("se version queue is %p\n", se->version_queue);
-        //DPRINTF("addr is %lx:%lx, flags %x\n", addr, addr / TARGET_PAGE_SIZE, flags);
+        DPRINTF("se is %p, flags %x\n", se, flags);
+        DPRINTF("se version queue is %p\n", se->version_queue);
+        DPRINTF("addr is %lx:%lx, flags %x\n", addr, addr / TARGET_PAGE_SIZE, flags);
         if (flags & RAM_SAVE_FLAG_MEM_SIZE) {
             /*
              * classicsong add version queue for memory
