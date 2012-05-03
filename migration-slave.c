@@ -267,6 +267,7 @@ start_host_slave(void *data) {
                 }                
                 buf_put_be64(RAM_SAVE_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
+                DPRINTF("length :%lx",  &comp_buf[0] - &comp_ptr[0]);
                 compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
                 DPRINTF("mem compressed: %d -> %d\n", &comp_buf[0] -&comp_ptr[0],  comped_len);
                 qemu_put_be32(f, comped_len);

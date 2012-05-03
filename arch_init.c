@@ -289,8 +289,8 @@ ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
     if (is_dup_page(p, *p)) {
         buf_put_be64(offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
                       RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
-    DPRINTF("putbe64 %lx\n",offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
-                      RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));   
+//    DPRINTF("putbe64 %lx\n",offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
+//                      RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));   
         if (block) {
             buf_put_byte(strlen(block->idstr));
             buf_put_buffer((uint8_t *)block->idstr, strlen(block->idstr));
