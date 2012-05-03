@@ -476,9 +476,9 @@ int buf_put_be64(Byte *f, uint64_t v)
     return 8;
 }
 
-int buf_get_byte(Byte *f)
+Byte buf_get_byte(Byte *f)
 {
-    int result = *f;
+    Byte result = *f;
     f = &f[1];    
     return result;
 
