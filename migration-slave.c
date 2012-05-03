@@ -212,7 +212,7 @@ start_host_slave(void *data) {
 //                DPRINTF("BLOCK chunk\n");
                 for (i = 0; i < body->len; i++) {
                     len = disk_putbuf_block_slave(body->blocks[i].ptr,
-                                                  body->iter_num, comp_buf + comp_pos);
+                                                  body->iter_num, comp_ptr + comp_pos);
                     comp_pos += len;
                     s->disk_task_queue->slave_sent[s->id] += BLOCK_SIZE;
                 }
@@ -256,7 +256,7 @@ start_host_slave(void *data) {
 //                DPRINTF("MEM chunk\n");
                 for (i = 0; i < body->len; i++) {
                     len = ram_putbuf_block_slave(body->pages[i].addr, body->pages[i].ptr, 
-                                             body->pages[i].block, comp_buf + comp_pos, s->mem_task_queue->iter_num, &actual_size);
+                                             body->pages[i].block, comp_ptr + comp_pos, s->mem_task_queue->iter_num, &actual_size);
                     comp_pos += len;
                     s->mem_task_queue->slave_sent[s->id] += actual_size;
                 }
