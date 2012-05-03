@@ -466,7 +466,7 @@ typedef unsigned char Byte;
 int buf_put_buffer( uint8_t *buf, int size1)
 {
     memcpy(comp_buf, buf, size1);
-    comp_buf = &comped_buf[size1];
+    comp_buf = &comp_buf[size1];
     return size1;
 }
 

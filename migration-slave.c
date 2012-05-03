@@ -262,7 +262,7 @@ start_host_slave(void *data) {
             if(s->compression){
                 DPRINTF("MEM chunk\n");
                 for (i = 0; i < body->len; i++) {
-                    DPRINTF("MEM bufptr = %8x, len = %8x\n", comp_buf, comp_pos);
+                    DPRINTF("MEM bufptr = %8x, len = %8x\n", comp_buf);
                     s->mem_task_queue->slave_sent[s->id] += ram_putbuf_block_slave(body->pages[i].addr, body->pages[i].ptr, 
                                              body->pages[i].block, s->mem_task_queue->iter_num);
                 }                
@@ -279,7 +279,7 @@ start_host_slave(void *data) {
                 for (j = 0; j < 100; j++)
                     printf("%x|", comp_buf[j]);
                 printf("\n");               
-                comp_buf = comp_ptr;
+                comp_buf = &comp_ptr[0];
                 free(body);
             }else{
                 for (i = 0; i < body->len; i++) {
