@@ -282,6 +282,7 @@ unsigned long
 ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p, 
                      Byte *f, int  mem_vnum, int *actual_size) {
     Byte *oldptr = f;
+    unsigned long len;
     RAMBlock *block = (RAMBlock *)block_p;
 
     if (is_dup_page(p, *p)) {
