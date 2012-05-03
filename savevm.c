@@ -1958,7 +1958,8 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
 
             if(compression && section_type == QEMU_VM_SECTION_PART){
                 comped_size = qemu_get_be32(f);
-                DPRINTF("READSIZE %d\n", comped_size);
+                qemu_get_buffer(f, (uint8_t *)decomp_buf, comped_size);
+                DPRINTF("## %s\n", decomp_buf);
                 decomp_size = COMPRESS_BUFSIZE;
                 uncompress(decomped_buf, &decomp_size, decomp_buf, comped_size);
                 DPRINTF("receive compressed chunk %d -> %d\n", comped_size, decomp_size);
