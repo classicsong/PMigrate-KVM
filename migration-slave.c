@@ -196,8 +196,8 @@ start_host_slave(void *data) {
         /* check for disk */
         if (queue_pop_task(s->disk_task_queue, &body_p) > 0) {
             body = (struct task_body *)body_p;
-            //DPRINTF("get disk task, %d, section id %d\n", s->mem_task_queue->iter_num,
-            //        s->mem_task_queue->section_id);
+            DPRINTF("get disk task, %d, section id %d\n", s->mem_task_queue->iter_num,
+                    s->mem_task_queue->section_id);
 
             /* Section type */
             qemu_put_byte(f, QEMU_VM_SECTION_PART);
