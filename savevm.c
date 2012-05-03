@@ -456,15 +456,15 @@ typedef unsigned char Byte;
 
 int buf_put_byte(Byte *f, int v)
 {
-    f = v;
+    f[0] = v;
     return 1;
 
 }
 int buf_put_be32(Byte *f, unsigned int v)
 {
     buf_put_byte(f,v >> 24);
-    buf_put_byte(&f[1],v  >> 16);
-    buf_put_byte(&f[2],v  >> 8);
+    buf_put_byte(&f[1],v >> 16);
+    buf_put_byte(&f[2],v >> 8);
     buf_put_byte(&f[3], v);
     return 4;
 }
