@@ -1991,7 +1991,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
             }
 
             if(compression && section_type == QEMU_VM_SECTION_PART){
-                decomp_size = qemu_get_be64(f);
+                decomp_size = qemu_get_be32(f);
                 qemu_get_buffer(f, (uint8_t *)decomp_buf, decomp_size);
                 decomp_buf[decomp_size] = '\0';
                 decomped_size = COMPRESS_BUFSIZE;
