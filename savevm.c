@@ -1988,9 +1988,8 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
                 ret = -EINVAL;
                 goto out;
             }
-
+            DPRINTF("<<<%d\n", section_id);
             if(compression && section_type == QEMU_VM_SECTION_PART){
-                DPRINTF("wtf\n");
                 decomp_size = qemu_get_be32(f);
                 qemu_get_buffer(f, (uint8_t *)decomp_buf, decomp_size);
                 decomp_buf[decomp_size] = '\0';
