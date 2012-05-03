@@ -1959,6 +1959,9 @@ typedef QLIST_HEAD(migr_handler, LoadStateEntry) migr_handler;
                                                  
 void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers, 
                                       struct banner *banner, int fd, int compression, Byte *decomp_buf, Byte *decomped_buf);
+
+extern __thread *decomped_ptr;
+
 void 
 slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers, 
                                  struct banner *banner, int fd, int compression, Byte *decomp_buf, Byte *decomped_buf) {
@@ -1996,7 +1999,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
                 qemu_get_buffer(f, (uint8_t *)decomp_buf, decomp_size);
                 decomp_buf[decomp_size] = '\0';
                 decomped_size = COMPRESS_BUFSIZE;
-                uncompress(decomped_buf, &decomped_size, decomp_buf, decomp_size);
+                uncompress(decomped_ptr, &decomped_size, decomp_buf, decomp_size);
                 DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, decomped_size);
                 DPRINTF("%lx", &decomped_buf[0]);
                 ret = vmstate_load(f, le->se, le->version_id);

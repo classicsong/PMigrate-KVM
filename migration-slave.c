@@ -21,6 +21,10 @@
     do { } while (0)
 #endif
 
+Byte __thread *decomp_buf;
+Byte __thread *decomped_buf;
+Byte __thread *decomped_ptr;
+Byte __thread *decomp_ptr;
 
 FdMigrationStateSlave *
 tcp_start_outgoing_migration_slave(Monitor *mon,
@@ -30,7 +34,7 @@ tcp_start_outgoing_migration_slave(Monitor *mon,
 void * start_host_slave(void *data);
 void init_host_slaves(struct FdMigrationState *s);
 void *start_dest_slave(void *data);
-Byte __thread *decomp_buf, *decomped_buf;
+
 
 
 static int socket_errno_slave(FdMigrationStateSlave *s) {
@@ -404,6 +408,8 @@ void *start_dest_slave(void *data) {
     if(para->compression){
         decomp_buf = malloc(COMPRESS_BUFSIZE);
         decomped_buf = malloc(COMPRESS_BUFSIZE);
+        decomp_ptr = decomp_buf;
+        decomped_ptr = decomped_buf;
     }
 
     val = 1;
@@ -456,8 +462,8 @@ void *start_dest_slave(void *data) {
     //slave_loadvm_state();
 
     if(para->compression){
-//        free(decomp_buf);
-//        free(decomped_buf);        
+        free(decomp_ptr);
+        free(decomped_ptr);        
     }
  err2:
     close(con_fd);
@@ -474,7 +480,6 @@ pthread_t create_dest_slave(char *listen_ip, int ssl_type, int compression, void
                             struct banner *banner, pthread_barrier_t *end_barrier) {
     struct dest_slave_para *data = (struct dest_slave_para *)malloc(sizeof(struct dest_slave_para));
     pthread_t tid;
-
     DPRINTF("create slave %s\n", listen_ip);
 
     data->listen_ip = listen_ip;

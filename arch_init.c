@@ -56,6 +56,7 @@ int graphic_depth = 15;
 #endif
 
 const char arch_config_name[] = CONFIG_QEMU_CONFDIR "/target-" TARGET_ARCH ".conf";
+extern __thread Byte *decomped_buf;
 
 #if defined(TARGET_ALPHA)
 #define QEMU_ARCH QEMU_ARCH_ALPHA
@@ -568,7 +569,7 @@ static inline void *host_from_stream_offset(QEMUFile *f,
 
 #include "savevm.h"
 
-int ram_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
+int ram_load(QEMUFile *f, void *opaque, int version_id)
 {
     ram_addr_t addr;
     int flags;

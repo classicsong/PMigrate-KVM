@@ -1113,7 +1113,9 @@ disk_write(void *bs_p, int64_t addr, void *buf_p, int nr_sectors) {
     return ret;
 };
 
-static int block_load(QEMUFile *f, void *opaque, int version_id, Byte *decomped_buf)
+extern Byte __thread *decomped_buf;
+
+static int block_load(QEMUFile *f, void *opaque, int version_id)
 {
     static int banner_printed;
     int len, flags;
