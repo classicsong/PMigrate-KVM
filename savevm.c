@@ -1961,9 +1961,12 @@ struct FdMigrationDestState *dest_state;
 typedef QLIST_HEAD(migr_handler, LoadStateEntry) migr_handler;
                                                  
 void slave_process_incoming_migration(QEMUFile *f, void * loadvm_handlers, 
-                                      struct banner *banner, int fd, int compression, Byte *decomp_buf, Byte *decomped_buf);
+                                      struct banner *banner, int fd, int compression);
 
+extern __thread *decomp_ptr;
 extern __thread *decomped_ptr;
+extern __thread *decomp_buf;
+extern __thread *decomped_buf;
 
 void 
 slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers, 
