@@ -312,6 +312,7 @@ ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
         memcpy(f, p, TARGET_PAGE_SIZE);
         f = &f[TARGET_PAGE_SIZE];
         actual_size =  TARGET_PAGE_SIZE;
+        DPRINTF("%lx", &f[0] - &oldptr[0]);
         return &f[0] - &oldptr[0];
     }
 }
