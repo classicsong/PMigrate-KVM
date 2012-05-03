@@ -224,7 +224,7 @@ start_host_slave(void *data) {
                 qemu_put_buffer(f, comped_buf, comped_len); 
                 qemu_fflush(f);
                 DPRINTF("PACKED HEAD:\n");
-                int j
+                int j;
                 for (j = 0; j < 100; j++)
                     printf("%x|", comp_buf[j]);
                 printf("\n");
@@ -274,7 +274,7 @@ start_host_slave(void *data) {
                 qemu_put_buffer(f, comped_buf, comped_len);
                 qemu_fflush(f);
                 DPRINTF("PACKED HEAD:\n");
-                int j
+                int j;
                 for (j = 0; j < 100; j++)
                     printf("%x|", comp_buf[j]);
                 printf("\n");               
