@@ -270,6 +270,8 @@ start_host_slave(void *data) {
                 qemu_put_be32(f, comped_len);
                 qemu_put_buffer(f, comped_buf, comped_len);
                 qemu_fflush(f);
+                comp_buf[100] = '\0';
+                DPRINTF("PACKED HEAD:%s\n", comp_buf);
                 comp_pos = 0;
                 free(body);
             }else{
