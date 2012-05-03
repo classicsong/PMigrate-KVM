@@ -284,6 +284,7 @@ ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
 unsigned long
 ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p, 
                      Byte *f, int  mem_vnum, int *actual_size) {
+    Byte *oldptr = f;
     unsigned long len;
     int result = 0;
     RAMBlock *block = (RAMBlock *)block_p;
