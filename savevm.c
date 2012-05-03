@@ -487,6 +487,7 @@ int buf_get_byte(Byte *f)
 
 unsigned int buf_get_be32(Byte *f)
 {
+    DPRINTF("buf_get_be32\n");
     unsigned int v;
     v = buf_get_byte(f) << 24;
     v |= buf_get_byte(f) << 16;
@@ -504,6 +505,7 @@ int buf_get_buffer(QEMUFile *f, uint8_t *buf, int size1)
 
 uint64_t buf_get_be64(Byte *f)
 {
+    DPRINTF("buf_get_be64\n");
     uint64_t v;
     v = (uint64_t)buf_get_be32(f) << 32;
     v |= buf_get_be32(f);
