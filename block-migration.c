@@ -123,13 +123,12 @@ static void blk_send(QEMUFile *f, BlkMigBlock * blk)
 
     qemu_put_buffer(f, blk->buf, BLOCK_SIZE);
 }
-unsigned long disk_putbuf_block_slave(void *ptr, int iter_num, Byte *f);
+unsigned long disk_putbuf_block_slave(void *ptr, int iter_num);
 unsigned long disk_save_block_slave(void *ptr, int iter_num, QEMUFile *f);
 //classicsong
 
 unsigned long
-disk_putbuf_block_slave(void *ptr, int iter_num, Byte *f) {
-    Byte *oldptr = f;
+disk_putbuf_block_slave(void *ptr, int iter_num) {
     int len;
     BlkMigBlock *blk = (BlkMigBlock *)ptr;
 
@@ -137,21 +136,20 @@ disk_putbuf_block_slave(void *ptr, int iter_num, Byte *f) {
     /* sector number and flags 
      * and iter number (classicsong)
      */
-    len = buf_put_be64(f, (blk->sector << BDRV_SECTOR_BITS)
+    buf_put_be64((blk->sector << BDRV_SECTOR_BITS)
 		  | BLK_MIG_FLAG_DEVICE_BLOCK | (iter_num << DISK_VNUM_OFFSET));
-    f = &f[len];
 
-    /* device name */    
-    len = buf_put_byte(f, len);
-    f = &f[len];
-    len = strlen(blk->bmds->bs->device_name);    
-    memcpy(f, (uint8_t *)blk->bmds->bs->device_name, len);
-    f = &f[len];
+    /* device name */   
+    len = strlen(blk->bmds->bs->device_name);   
+    buf_put_byte(len);
+    buf_put_buffer((uint8_t *)blk->bmds->bs->device_name, len);
 
-    memcpy(f, blk->buf, BLOCK_SIZE);
-    f = &f[BLOCK_SIZE];
+    buf_put_buffer(blk->buf, BLOCK_SIZE);
 
-    return &f[0] - &oldptr[0];
+    qemu_free(blk->buf);
+    qemu_free(blk);
+
+    return BLOCK_SIZE;
 }
 
 
@@ -1113,7 +1111,7 @@ disk_write(void *bs_p, int64_t addr, void *buf_p, int nr_sectors) {
     return ret;
 };
 
-extern Byte __thread *decomped_buf;
+extern __thread Byte *decomped_buf;
 
 static int block_load(QEMUFile *f, void *opaque, int version_id)
 {

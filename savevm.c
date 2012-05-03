@@ -107,6 +107,9 @@
 #define ARP_PTYPE_IP 0x0800
 #define ARP_OP_REQUEST_REV 0x3
 
+extern __thread Bytef *comp_ptr;
+extern __thread Bytef *comp_buf;
+extern __thread Bytef *comped_buf;
 extern __thread Bytef *decomp_ptr;
 extern __thread Bytef *decomped_ptr;
 extern __thread Bytef *decomp_buf;
@@ -460,25 +463,33 @@ static int bdrv_fclose(void *opaque)
 
 typedef unsigned char Byte;
 
-int buf_put_byte(Byte *f, int v)
+int buf_put_buffer( uint8_t *buf, int size1)
 {
-    f[0] = (Byte )v;
+    memcpy(comp_buf, buf, size1);
+    comp_buf = &comped_buf[size1];
+    return size1;
+}
+
+int buf_put_byte(int v)
+{
+    comp_buf[0] = (Byte )v;
+    comp_buf = &comp_buf[1];
     return 1;
 
 }
-int buf_put_be32(Byte *f, unsigned int v)
+int buf_put_be32(unsigned int v)
 {
-    buf_put_byte(f,v >> 24);
-    buf_put_byte(&f[1],v >> 16);
-    buf_put_byte(&f[2],v >> 8);
-    buf_put_byte(&f[3], v);
+    buf_put_byte(v >> 24);
+    buf_put_byte(v >> 16);
+    buf_put_byte(v >> 8);
+    buf_put_byte(v);
     return 4;
 }
 
-int buf_put_be64(Byte *f, uint64_t v)
+int buf_put_be64(uint64_t v)
 {
-    buf_put_be32(f, v >> 32);
-    buf_put_be32(&f[1], v);
+    buf_put_be32(v >> 32);
+    buf_put_be32(v);
     return 8;
 }
 
@@ -486,7 +497,6 @@ int buf_get_byte()
 {
     int result = decomped_buf[0];
     decomped_buf = &decomped_buf[1];
-    DPRINTF("RESULT:%x", result);
     return result;
 
 }

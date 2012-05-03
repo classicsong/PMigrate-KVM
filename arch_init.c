@@ -279,45 +279,32 @@ unsigned long ram_save_block_slave(ram_addr_t offset, uint8_t *p, void *block_p,
                          struct FdMigrationStateSlave *s, int mem_vnum);
 unsigned long
 ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p, 
-                     Byte *f, int mem_vnum, int *actual_size); 
+                     int mem_vnum); 
 
 unsigned long
 ram_putbuf_block_slave(ram_addr_t offset, uint8_t *p, void *block_p, 
-                     Byte *f, int  mem_vnum, int *actual_size) {
-    Byte *oldptr = f;
-    unsigned long len;
+                     int  mem_vnum) {
     RAMBlock *block = (RAMBlock *)block_p;
 
     if (is_dup_page(p, *p)) {
-        len = buf_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
+        buf_put_be64(offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
                       RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
     DPRINTF("putbe64 %lx\n",offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | 
-                      RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));
-    f = &f[len];
+                      RAM_SAVE_FLAG_COMPRESS | (mem_vnum << MEM_VNUM_OFFSET));   
         if (block) {
-            len = buf_put_byte(f, strlen(block->idstr));
-            f = &f[len];
-            len = strlen(block->idstr);
-            memcpy(f, (uint8_t *)block->idstr, len);
+            buf_put_byte(strlen(block->idstr));
+            buf_put_buffer((uint8_t *)block->idstr, strlen(block->idstr));
         }
-        len = buf_put_byte(f, *p);
-        f = &f[len];
-        actual_size = 1;
-        return &f[0] - &oldptr[0];
+        buf_put_byte(*p);
+        return  1;
     } else {
-        len = buf_put_be64(f, offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | RAM_SAVE_FLAG_PAGE | (mem_vnum << MEM_VNUM_OFFSET));
-         f = &f[len];
+         buf_put_be64(offset | (block == NULL ? RAM_SAVE_FLAG_CONTINUE : 0) | RAM_SAVE_FLAG_PAGE | (mem_vnum << MEM_VNUM_OFFSET));
         if (block) {
-            len = buf_put_byte(f, strlen(block->idstr));
-            f = &f[len];
-            len = strlen(block->idstr);
-            memcpy(f, (uint8_t *)block->idstr, len);
-            f = &f[len];
+            buf_put_byte(strlen(block->idstr));
+            buf_put_buffer((uint8_t *)block->idstr, strlen(block->idstr));
         }
-        memcpy(f, p, TARGET_PAGE_SIZE);
-        f = &f[TARGET_PAGE_SIZE];
-        actual_size =  TARGET_PAGE_SIZE;
-        return &f[0] - &oldptr[0];
+        buf_put_buffer(p, TARGET_PAGE_SIZE);
+        return TARGET_PAGE_SIZE;
     }
 }
 

@@ -25,6 +25,9 @@ Bytef __thread *decomp_buf;
 Bytef __thread *decomped_buf;
 Bytef __thread *decomped_ptr;
 Bytef __thread *decomp_ptr;
+Bytef __thread *comp_buf;
+Bytef __thread *comped_buf;
+Bytef __thread *comp_ptr;
 
 FdMigrationStateSlave *
 tcp_start_outgoing_migration_slave(Monitor *mon,
@@ -127,11 +130,10 @@ start_host_slave(void *data) {
     FdMigrationStateSlave *s = (FdMigrationStateSlave *)data;
     struct task_body *body;
     struct sockaddr_in addr;
-    int i, ret, actual_size;
+    int i, ret;
     QEMUFile *f;
     struct timespec slave_sleep = {0, 1000000};
     unsigned long data_sent;
-    Bytef *comp_buf, *comped_buf;
     long comp_pos, len, comped_len;
     
     if (parse_host_port(&addr, s->dest_ip) < 0) {
@@ -154,6 +156,7 @@ start_host_slave(void *data) {
     if (s->compression){
        comp_buf = (Bytef *)malloc(COMPRESS_BUFSIZE);
        comped_buf = (Bytef *)malloc(COMPRESS_BUFSIZE);
+       comp_ptr = comp_buf; 
     }
 
     //socket_set_nonblock(s->fd);
@@ -211,15 +214,13 @@ start_host_slave(void *data) {
             if (s->compression){
 //                DPRINTF("BLOCK chunk\n");
                 for (i = 0; i < body->len; i++) {
-                    len = disk_putbuf_block_slave(body->blocks[i].ptr,
-                                                  body->iter_num, comp_buf + comp_pos);
-                    comp_pos += len;
-                    s->disk_task_queue->slave_sent[s->id] += BLOCK_SIZE;
+                    s->disk_task_queue->slave_sent[s->id] += disk_putbuf_block_slave(body->blocks[i].ptr,
+                                                  body->iter_num);
                 }
-                comp_pos += buf_put_be64(comp_buf + comp_pos, BLK_MIG_FLAG_EOS);
+                buf_put_be64(BLK_MIG_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
-                compress2(comped_buf, &comped_len, comp_buf, comp_pos, COMPRESS_LEVEL);
-                DPRINTF("disk compressed: %d -> %d [%.2f]\n", comp_pos, comped_len, comped_len/(comp_pos + 0.0));
+                compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
+                DPRINTF("disk compressed: %d -> %d\n", &comp_buf[0] -&comp_ptr[0],  comped_len);
                 qemu_put_be32(f, comped_len);
                 qemu_put_buffer(f, comped_buf, comped_len); 
                 qemu_fflush(f);
@@ -228,7 +229,7 @@ start_host_slave(void *data) {
                 for (j = 0; j < 100; j++)
                     printf("%x|", comp_buf[j]);
                 printf("\n");
-                comp_pos = 0;
+                comp_buf = comp_ptr;
                 free(body);
             }else{          
                 /*
@@ -261,15 +262,13 @@ start_host_slave(void *data) {
 //                DPRINTF("MEM chunk\n");
                 for (i = 0; i < body->len; i++) {
             //        DPRINTF("MEM bufptr = %8x, len = %8x\n", comp_buf, comp_pos);
-                    len = ram_putbuf_block_slave(body->pages[i].addr, body->pages[i].ptr, 
-                                             body->pages[i].block, comp_buf + comp_pos, s->mem_task_queue->iter_num, &actual_size);
-                    comp_pos += len;
-                    s->mem_task_queue->slave_sent[s->id] += actual_size;
+                    s->mem_task_queue->slave_sent[s->id] += ram_putbuf_block_slave(body->pages[i].addr, body->pages[i].ptr, 
+                                             body->pages[i].block, s->mem_task_queue->iter_num);
                 }                
-                comp_pos += buf_put_be64(comp_buf + comp_pos, RAM_SAVE_FLAG_EOS);
+                buf_put_be64(RAM_SAVE_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
-                compress2(comped_buf, &comped_len, comp_buf, comp_pos, COMPRESS_LEVEL);                
-                DPRINTF("mem compressed: %d -> %d [%.2f]\n", comp_pos, comped_len, comped_len/(comp_pos + 0.0));
+                compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
+                DPRINTF("mem compressed: %d -> %d\n", &comp_buf[0] -&comp_ptr[0],  comped_len);
                 qemu_put_be32(f, comped_len);
                 qemu_put_buffer(f, comped_buf, comped_len);
                 qemu_fflush(f);
@@ -278,7 +277,7 @@ start_host_slave(void *data) {
                 for (j = 0; j < 100; j++)
                     printf("%x|", comp_buf[j]);
                 printf("\n");               
-                 comp_pos = 0;
+                comp_buf = comp_ptr;
                 free(body);
             }else{
                 for (i = 0; i < body->len; i++) {
