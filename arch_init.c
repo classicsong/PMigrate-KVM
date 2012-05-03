@@ -623,14 +623,13 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
                         qemu_get_buffer(f, (uint8_t *)id, len);
                         id[len] = 0;
                         length = qemu_get_be64(f);
-                        DPRINTF("get length %lx", length);
                     }else{
                         len = buf_get_byte(decomped_buf);
                         buf_get_buffer(decomped_buf, (uint8_t *)id, len);
                         id[len] = 0;
                         length = buf_get_be64(decomped_buf);
-                        DPRINTF("get length %lx", length);
                     }
+                    DPRINTF("get length %lx", length);
 
                     DPRINTF("memory id %s\n", id);
 
