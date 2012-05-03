@@ -608,7 +608,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
         return -EINVAL;
     }
    
-   DPRINTF("handle payload %x\n", decomped_buf);
+//   DPRINTF("handle payload %x\n", decomped_buf);
 
     do {
         if(decomped_buf == NULL)
@@ -780,7 +780,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             volatile uint32_t *vnum_p;
             unsigned long index = 0;
 
-            DPRINTF("handle normal page\n");
+//            DPRINTF("handle normal page\n");
             if (version_id == 3){
                 DPRINTF("calling qemu_get_ram_ptr();\n");
                 host = qemu_get_ram_ptr(addr);
