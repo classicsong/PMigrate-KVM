@@ -1522,7 +1522,7 @@ static int vmstate_load(QEMUFile *f, SaveStateEntry *se, int version_id, Byte *d
             return se->load_state(f, se, version_id);
         }
         
-        return se->load_state(f, se->opaque, version_id);
+        return se->load_state(f, se->opaque, version_id, decomp_buf);
     }
     return vmstate_load_state(f, se->vmsd, se->opaque, decomp_buf);
 }
