@@ -305,7 +305,7 @@ host_disk_master(void * data) {
 
     do {
 //        DPRINTF("Start Disk iteration %d, %lx\n", s->disk_task_queue->iter_num,
-                s->disk_task_queue->sent_this_iter);
+//                s->disk_task_queue->sent_this_iter);
         bwidth = qemu_get_clock_ns(rt_clock);
 
         if (qemu_file_has_error(s->file)) {
