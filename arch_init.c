@@ -701,7 +701,7 @@ int ram_load(QEMUFile *f, void *opaque, int version_id)
             volatile uint32_t *vnum_p;
             unsigned long index = 0;
 
-            DPRINTF("handle compress\n");
+//            DPRINTF("handle compress\n");
             if (version_id == 3)
                 host = qemu_get_ram_ptr(addr);
             else{

@@ -2103,7 +2103,7 @@ int qemu_loadvm_state(QEMUFile *f)
         int num_slaves, num_ips, ssl_type, i, compression;
         uint8_t *ip_buf;               //32 bytes is enough for dest_ip:port
 
-        DPRINTF("section type %d\n", section_type);
+//        DPRINTF("section type %d\n", section_type);
         switch (section_type) {
         case QEMU_VM_SECTION_START:
         case QEMU_VM_SECTION_FULL:

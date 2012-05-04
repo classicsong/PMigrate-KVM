@@ -21,13 +21,16 @@
     do { } while (0)
 #endif
 
-Bytef __thread *decomp_buf;
-Bytef __thread *decomped_buf;
-Bytef __thread *decomped_ptr;
-Bytef __thread *decomp_ptr;
-Bytef __thread *comp_buf;
-Bytef __thread *comped_buf;
-Bytef __thread *comp_ptr;
+__thread Bytef *decomp_buf;
+__thread Bytef *decomped_buf;
+__thread Bytef *decomped_ptr;
+__thread Bytef *decomp_ptr;
+__thread Bytef *comp_buf;
+__thread Bytef *comped_buf;
+__thread Bytef *comp_ptr;
+__thread long comp_time;
+__thread long comp_size;
+__thread long comped_size;
 
 FdMigrationStateSlave *
 tcp_start_outgoing_migration_slave(Monitor *mon,
@@ -135,7 +138,7 @@ start_host_slave(void *data) {
     struct timespec slave_sleep = {0, 1000000};
     unsigned long data_sent;
     long comp_pos, len, comped_len;
-    
+     struct timeval start_tv, end_tv;   
     if (parse_host_port(&addr, s->dest_ip) < 0) {
         fprintf(stderr, "wrong dest ip %s\n", s->dest_ip);
         return NULL;
@@ -156,7 +159,10 @@ start_host_slave(void *data) {
     if (s->compression){
        comp_buf = (Bytef *)malloc(COMPRESS_BUFSIZE);
        comped_buf = (Bytef *)malloc(COMPRESS_BUFSIZE);
-       comp_ptr = comp_buf; 
+       comp_ptr = comp_buf;
+       comp_time = 0;
+       comp_size = 0;
+       comped_size = 0;
     }
 
     //socket_set_nonblock(s->fd);
@@ -219,8 +225,13 @@ start_host_slave(void *data) {
                 }
                 buf_put_be64(BLK_MIG_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
+                gettimeofday(&start_tv, NULL);
                 compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
-                DPRINTF("disk compressed: %d -> %d\n", &comp_buf[0] -&comp_ptr[0],  comped_len);
+                gettimeofday(&end_tv, NULL);
+                comp_time += (end_tv.tv_sec - start_tv.tv_sec) * 1000 + (end_tv.tv_usec - start_tv.tv_usec) / 1000;
+                comp_size += &comp_buf[0] - &comp_ptr[0];
+                comped_size += comped_len;
+//                DPRINTF("disk compressed: %d -> %d\n", &comp_buf[0] -&comp_ptr[0],  comped_len);
                 qemu_put_be32(f, comped_len);
                 qemu_put_buffer(f, comped_buf, comped_len); 
                 qemu_fflush(f);
@@ -265,8 +276,13 @@ start_host_slave(void *data) {
                 }                
                 buf_put_be64(RAM_SAVE_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
+                gettimeofday(&start_tv, NULL);
                 compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
-                DPRINTF("mem compressed: %d -> %d\n", &comp_buf[0] -&comp_ptr[0],  comped_len);
+                gettimeofday(&end_tv, NULL);
+                comp_time += (end_tv.tv_sec - start_tv.tv_sec) * 1000 + (end_tv.tv_usec - start_tv.tv_usec) / 1000;
+                comp_size += &comp_buf[0] - &comp_ptr[0];
+                comped_size += comped_len;
+//                DPRINTF("mem compressed: %d -> %d\n", &comp_buf[0] -&comp_ptr[0],  comped_len);
                 qemu_put_be32(f, comped_len);
                 qemu_put_buffer(f, comped_buf, comped_len);
                 qemu_fflush(f);
@@ -318,8 +334,9 @@ start_host_slave(void *data) {
         }
     }
     if (s->compression){
-//        free(comp_buf);
-//        free(comped_buf);
+        free(comp_buf);
+        free(comped_buf);
+        DPRINTF("slave[%d] comp_time=%ld, ratio=%ld->%ld[%f]",s->id, comp_time, comp_size, comped_size, comp_size / (comped_size + 0.0));
     }
         
     DPRINTF("slave terminate\n");
