@@ -80,10 +80,11 @@ static int tcp_close_slave(FdMigrationStateSlave *s)
 #define QEMU_VM_ITER_END             0x07
 //borrowed from block-migration.c
 #define BLK_MIG_FLAG_EOS                0x02
-#define COMPRESS_LEVEL          0 //Z_DEFAULT_COMPRESSION
+#define COMPRESS_LEVEL          5 //Z_DEFAULT_COMPRESSION
 //borrowed from arch_init.c
 #define RAM_SAVE_FLAG_EOS      0x10
 #define COMPRESS_BUFSIZE        (12 << 20) /* Compression buffer  12MB */
+#define COMPRESS_IGNORE         (32 << 10)
 
 /*
  * host_port: the target connection ip:port
@@ -226,7 +227,10 @@ start_host_slave(void *data) {
                 buf_put_be64(BLK_MIG_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
                 gettimeofday(&start_tv, NULL);
-                compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
+                if (&comp_buf[0] - &comp_ptr[0] > COMPRESS_IGNORE)
+                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
+                else
+                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], 0);
                 gettimeofday(&end_tv, NULL);
                 comp_time += (end_tv.tv_sec - start_tv.tv_sec) * 1000 + (end_tv.tv_usec - start_tv.tv_usec) / 1000;
                 comp_size += &comp_buf[0] - &comp_ptr[0];
@@ -277,7 +281,10 @@ start_host_slave(void *data) {
                 buf_put_be64(RAM_SAVE_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
                 gettimeofday(&start_tv, NULL);
-                compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
+                if (&comp_buf[0] - &comp_ptr[0] > COMPRESS_IGNORE)
+                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
+                else
+                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], 0);
                 gettimeofday(&end_tv, NULL);
                 comp_time += (end_tv.tv_sec - start_tv.tv_sec) * 1000 + (end_tv.tv_usec - start_tv.tv_usec) / 1000;
                 comp_size += &comp_buf[0] - &comp_ptr[0];
