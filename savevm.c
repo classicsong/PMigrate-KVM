@@ -2015,7 +2015,7 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
                 decomped_size = COMPRESS_BUFSIZE;
                 uncompress(decomped_ptr, &decomped_size, decomp_buf, decomp_size);
                 decomped_buf = decomped_ptr;
-                DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, decomped_size);
+//                DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, decomped_size);
 /*
                 DPRINTF("UNPACKED HEAD:\n");
                 int j;

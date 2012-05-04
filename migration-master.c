@@ -304,7 +304,7 @@ host_disk_master(void * data) {
     blk_mig_reset_dirty_cursor_master();
 
     do {
-        DPRINTF("Start Disk iteration %d, %lx\n", s->disk_task_queue->iter_num,
+//        DPRINTF("Start Disk iteration %d, %lx\n", s->disk_task_queue->iter_num,
                 s->disk_task_queue->sent_this_iter);
         bwidth = qemu_get_clock_ns(rt_clock);
 

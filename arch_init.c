@@ -544,9 +544,6 @@ static inline void *host_from_buffer_offset(ram_addr_t offset,
     id[len] = 0;
 
 //    DPRINTF("dev:[%d] %s\n",len, id);
-    int j;
-    for (j = 0; j < len; j++)
-        printf("%x|", id[j]);
     QLIST_FOREACH(block, &ram_list.blocks, next) {
         if (!strncmp(id, block->idstr, sizeof(id))) {
             //DPRINTF("block host %p, block length %lx, %lx\n", block->host, block->length, 

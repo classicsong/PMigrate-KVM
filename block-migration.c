@@ -1256,7 +1256,7 @@ static int block_load(QEMUFile *f, void *opaque, int version_id)
                 len = buf_get_byte();
                 buf_get_buffer((uint32_t *)device_name, len);
                 device_name[len] = '\0';
-                DPRINTF("[DEV]%s\n",device_name);
+//                DPRINTF("[DEV]%s\n",device_name);
             }
 
             bs = bdrv_find(device_name);
