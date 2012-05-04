@@ -336,7 +336,7 @@ start_host_slave(void *data) {
     if (s->compression){
         free(comp_buf);
         free(comped_buf);
-        DPRINTF("slave[%d] comp_time=%ld, ratio=%ld->%ld[%f]",s->id, comp_time, comp_size, comped_size, comp_size / (comped_size + 0.0));
+        DPRINTF("slave[%d] comp_time=%ld, ratio=%ld->%ld[%f]\n",s->id, comp_time, comped_size, comp_size, comped_size / (comp_size + 0.0));
     }
         
     DPRINTF("slave terminate\n");
