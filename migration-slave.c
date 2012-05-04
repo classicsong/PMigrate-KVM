@@ -80,7 +80,7 @@ static int tcp_close_slave(FdMigrationStateSlave *s)
 #define QEMU_VM_ITER_END             0x07
 //borrowed from block-migration.c
 #define BLK_MIG_FLAG_EOS                0x02
-#define COMPRESS_LEVEL          Z_DEFAULT_COMPRESSION
+#define COMPRESS_LEVEL          0 //Z_DEFAULT_COMPRESSION
 //borrowed from arch_init.c
 #define RAM_SAVE_FLAG_EOS      0x10
 #define COMPRESS_BUFSIZE        (12 << 20) /* Compression buffer  12MB */
