@@ -100,6 +100,9 @@
 #endif
 
 
+#define ENABLE_ZLIB 1
+#define ENABLE_QUICKLZ 0
+
 #define SELF_ANNOUNCE_ROUNDS 5
 
 #ifndef ETH_P_RARP
@@ -2012,15 +2015,23 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
             }
             if(compression && section_type == QEMU_VM_SECTION_PART){
                 decomp_size = qemu_get_be32(f);
+#ifdef ENABLE_ZLIB
 		decomped_size = COMPRESS_BUFSIZE - 1;
+#endif
+#ifdef ENABLE_QUICKLZ
+		decomped_size = qemu_get_be32(f);
+#endif
                 qemu_get_buffer(f, (uint8_t *)decomp_ptr, decomp_size);
                 decomp_buf = decomp_ptr;
                 decomp_buf[decomp_size] = '\0';
-//		state_decompress = (qlz_state_decompress *)malloc(sizeof(qlz_state_decompress));
-//		qlz_decompress(decomp_buf,decomped_ptr, state_decompress, decomped_size);
-//		free(state_decompress);
-
+#ifdef ENABLE_QUICKLZ
+		state_decompress = (qlz_state_decompress *)malloc(sizeof(qlz_state_decompress));
+		qlz_decompress(decomp_buf,decomped_ptr, state_decompress, decomped_size);
+		free(state_decompress);
+#endif
+#ifdef ENABLE_ZLIB
                 uncompress(decomped_ptr, &decomped_size, decomp_buf, decomp_size);
+#endif
                 decomped_buf = decomped_ptr;
 //                DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, decomped_size);
 /*
