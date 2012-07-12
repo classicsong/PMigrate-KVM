@@ -7,7 +7,7 @@
 #include "sysemu.h"
 #include "buffered_file.h"
 #include "block.h"
-#include "zlib.h"
+#include "quicklz.h"
 
 #define MULTI_TRY 100
 
@@ -32,7 +32,9 @@ __thread long comp_time;
 __thread long comp_size;
 __thread long comped_size;
 
-FdMigrationStateSlave *
+qlz_state_compress *state_compress;
+
+MigrationStateSlave *
 tcp_start_outgoing_migration_slave(Monitor *mon,
                                    char *dest_ip,
                                    int64_t bandwidth_limit,
@@ -47,7 +49,16 @@ static int socket_errno_slave(FdMigrationStateSlave *s) {
     return errno;
 }
 
-/*
+void print_debuginfo()
+{
+        printf("[SUMMARY]\n");
+        printf("comp_size=%ld\ncomped_size=%ld\ncomp_time=%ld\n",
+                comp_size,comped_size,comp_time);
+        printf("[/SUMMARY]\n");
+}
+
+
+
  * classicsong add ssl op here
  */
 static int socket_write_ssl(FdMigrationStateSlave *s, const void * buf, size_t size)
@@ -227,16 +238,20 @@ start_host_slave(void *data) {
                 buf_put_be64(BLK_MIG_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
                 gettimeofday(&start_tv, NULL);
-                if (&comp_buf[0] - &comp_ptr[0] > COMPRESS_IGNORE)
-                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
-                else
-                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], 0);
+  	        state_compress = (qlz_state_compress *)malloc(sizeof(qlz_state_compress));
+	        comped_len = qlz_compress(comp_ptr,comped_buf,  &comp_buf[0] -&comp_ptr[0], state_compress);
+	        free(state_compress);
+//               if (&comp_buf[0] - &comp_ptr[0] > COMPRESS_IGNORE)
+//                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
+//                else
+//                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], 0);
                 gettimeofday(&end_tv, NULL);
                 comp_time += (end_tv.tv_sec - start_tv.tv_sec) * 1000 + (end_tv.tv_usec - start_tv.tv_usec) / 1000;
                 comp_size += &comp_buf[0] - &comp_ptr[0];
                 comped_size += comped_len;
 //                DPRINTF("disk compressed: %d -> %d\n", &comp_buf[0] -&comp_ptr[0],  comped_len);
                 qemu_put_be32(f, comped_len);
+		qemu_put_be32(f,  &comp_buf[0] - &comp_ptr[0]);
                 qemu_put_buffer(f, comped_buf, comped_len); 
                 qemu_fflush(f);
 /*                DPRINTF("PACKED HEAD:\n");
@@ -281,16 +296,22 @@ start_host_slave(void *data) {
                 buf_put_be64(RAM_SAVE_FLAG_EOS);
                 comped_len = COMPRESS_BUFSIZE;
                 gettimeofday(&start_tv, NULL);
-                if (&comp_buf[0] - &comp_ptr[0] > COMPRESS_IGNORE)
-                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
-                else
-                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], 0);
+
+  	        state_compress = (qlz_state_compress *)malloc(sizeof(qlz_state_compress));
+	        comped_len = qlz_compress(comp_ptr,comped_buf,  &comp_buf[0] -&comp_ptr[0], state_compress);
+	        free(state_compress);
+
+//                if (&comp_buf[0] - &comp_ptr[0] > COMPRESS_IGNORE)
+//                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], COMPRESS_LEVEL);
+//                else
+//                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], 0);
                 gettimeofday(&end_tv, NULL);
                 comp_time += (end_tv.tv_sec - start_tv.tv_sec) * 1000 + (end_tv.tv_usec - start_tv.tv_usec) / 1000;
                 comp_size += &comp_buf[0] - &comp_ptr[0];
                 comped_size += comped_len;
 //                DPRINTF("mem compressed: %d -> %d\n", &comp_buf[0] -&comp_ptr[0],  comped_len);
                 qemu_put_be32(f, comped_len);
+		qemu_put_be32(f,  &comp_buf[0] - &comp_ptr[0]);
                 qemu_put_buffer(f, comped_buf, comped_len);
                 qemu_fflush(f);
 /*                DPRINTF("PACKED HEAD:\n");
