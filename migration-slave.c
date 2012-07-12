@@ -58,7 +58,7 @@ void print_debuginfo()
 }
 
 
-
+/*
  * classicsong add ssl op here
  */
 static int socket_write_ssl(FdMigrationStateSlave *s, const void * buf, size_t size)
