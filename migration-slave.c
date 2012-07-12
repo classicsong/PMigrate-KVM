@@ -34,7 +34,7 @@ __thread long comped_size;
 
 qlz_state_compress *state_compress;
 
-MigrationStateSlave *
+FdMigrationStateSlave *
 tcp_start_outgoing_migration_slave(Monitor *mon,
                                    char *dest_ip,
                                    int64_t bandwidth_limit,
