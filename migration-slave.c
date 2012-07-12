@@ -21,6 +21,18 @@
     do { } while (0)
 #endif
 
+Bytef *decomp_buf;
+Bytef *decomped_buf;
+Bytef *decomped_ptr;
+Bytef *decomp_ptr;
+Bytef *comp_buf;
+Bytef *comped_buf;
+Bytef *comp_ptr;
+long comp_time;
+long comp_size;
+long comped_size;
+
+/*
 __thread Bytef *decomp_buf;
 __thread Bytef *decomped_buf;
 __thread Bytef *decomped_ptr;
@@ -31,7 +43,7 @@ __thread Bytef *comp_ptr;
 __thread long comp_time;
 __thread long comp_size;
 __thread long comped_size;
-
+*/
 qlz_state_compress *state_compress;
 
 FdMigrationStateSlave *
