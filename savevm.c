@@ -33,6 +33,7 @@
 /* Needed early for CONFIG_BSD etc. */
 #include "config-host.h"
 #include "quicklz.h"
+#include "zlib.h"
 
 #ifndef _WIN32
 #include <sys/times.h>
@@ -2011,15 +2012,15 @@ slave_process_incoming_migration(QEMUFile *f, void *loadvm_handlers,
             }
             if(compression && section_type == QEMU_VM_SECTION_PART){
                 decomp_size = qemu_get_be32(f);
-		decomped_size = qemu_get_be32(f);
+		decomped_size = COMPRESS_BUFSIZE - 1;
                 qemu_get_buffer(f, (uint8_t *)decomp_ptr, decomp_size);
                 decomp_buf = decomp_ptr;
                 decomp_buf[decomp_size] = '\0';
-		state_decompress = (qlz_state_decompress *)malloc(sizeof(qlz_state_decompress));
-		qlz_decompress(decomp_buf,decomped_ptr, state_decompress, decomped_size);
-		free(state_decompress);
+//		state_decompress = (qlz_state_decompress *)malloc(sizeof(qlz_state_decompress));
+//		qlz_decompress(decomp_buf,decomped_ptr, state_decompress, decomped_size);
+//		free(state_decompress);
 
-//                uncompress(decomped_ptr, &decomped_size, decomp_buf, decomp_size);
+                uncompress(decomped_ptr, &decomped_size, decomp_buf, decomp_size);
                 decomped_buf = decomped_ptr;
 //                DPRINTF("receive compressed chunk %d -> %d\n", decomp_size, decomped_size);
 /*
