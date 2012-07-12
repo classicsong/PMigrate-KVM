@@ -21,7 +21,7 @@
     do { } while (0)
 #endif
 
-typedef unsigned byte Bytef
+typedef byte Bytef;
 
 __thread Bytef *decomp_buf;
 __thread Bytef *decomped_buf;
