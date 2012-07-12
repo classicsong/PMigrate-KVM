@@ -115,7 +115,7 @@ extern __thread Bytef *decomp_ptr;
 extern __thread Bytef *decomped_ptr;
 extern __thread Bytef *decomp_buf;
 extern __thread Bytef *decomped_buf;
-qlz_state_decompress *state_decompress;
+__thread qlz_state_decompress *state_decompress;
 
 
 static int announce_self_create(uint8_t *buf,

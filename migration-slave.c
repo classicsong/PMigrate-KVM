@@ -36,7 +36,7 @@ __thread long comp_time;
 __thread long comp_size;
 __thread long comped_size;
 
-qlz_state_compress *state_compress;
+__thread qlz_state_compress *state_compress;
 
 FdMigrationStateSlave *
 tcp_start_outgoing_migration_slave(Monitor *mon,
