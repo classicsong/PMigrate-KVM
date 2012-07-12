@@ -101,7 +101,7 @@
 
 
 #define ENABLE_ZLIB 1
-#define ENABLE_QUICKLZ 0
+//#define ENABLE_QUICKLZ 1 
 
 #define SELF_ANNOUNCE_ROUNDS 5
 

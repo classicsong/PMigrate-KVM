@@ -22,7 +22,7 @@
     do { } while (0)
 #endif
 
-#define ENABLE_QUICKLZ 0
+//#define ENABLE_QUICKLZ 1
 #define ENABLE_ZLIB 1
 
 typedef unsigned char Byte;
