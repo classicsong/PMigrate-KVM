@@ -32,9 +32,12 @@ __thread Bytef *decomp_ptr;
 __thread Bytef *comp_buf;
 __thread Bytef *comped_buf;
 __thread Bytef *comp_ptr;
-__thread long comp_time;
-__thread long comp_size;
-__thread long comped_size;
+__thread long mcomp_time;
+__thread long mcomp_size;
+__thread long mcomped_size;
+__thread long dcomp_time;
+__thread long dcomp_size;
+__thread long dcomped_size;
 
 __thread qlz_state_compress *state_compress;
 
@@ -52,15 +55,6 @@ void *start_dest_slave(void *data);
 static int socket_errno_slave(FdMigrationStateSlave *s) {
     return errno;
 }
-
-void print_debuginfo()
-{
-        printf("[SUMMARY]\n");
-        printf("comp_size=%ld\ncomped_size=%ld\ncomp_time=%ld\n",
-                comp_size,comped_size,comp_time);
-        printf("[/SUMMARY]\n");
-}
-
 
 /*
  * classicsong add ssl op here
@@ -176,9 +170,12 @@ start_host_slave(void *data) {
        comp_buf = (Bytef *)malloc(COMPRESS_BUFSIZE);
        comped_buf = (Bytef *)malloc(COMPRESS_BUFSIZE);
        comp_ptr = comp_buf;
-       comp_time = 0;
-       comp_size = 0;
-       comped_size = 0;
+       mcomp_time = 0;
+       mcomp_size = 0;
+       mcomped_size = 0;
+       dcomp_time = 0;
+       dcomp_size = 0;
+       dcomped_size = 0;
     }
 
     //socket_set_nonblock(s->fd);
@@ -250,9 +247,9 @@ start_host_slave(void *data) {
 //                else
 //                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], 0);
                 gettimeofday(&end_tv, NULL);
-                comp_time += (end_tv.tv_sec - start_tv.tv_sec) * 1000 + (end_tv.tv_usec - start_tv.tv_usec) / 1000;
-                comp_size += &comp_buf[0] - &comp_ptr[0];
-                comped_size += comped_len;
+                dcomp_time += (end_tv.tv_sec - start_tv.tv_sec) * 1000 + (end_tv.tv_usec - start_tv.tv_usec) / 1000;
+                dcomp_size += &comp_buf[0] - &comp_ptr[0];
+                dcomped_size += comped_len;
 //                DPRINTF("disk compressed: %d -> %d\n", &comp_buf[0] -&comp_ptr[0],  comped_len);
                 qemu_put_be32(f, comped_len);
 		qemu_put_be32(f,  &comp_buf[0] - &comp_ptr[0]);
@@ -310,9 +307,9 @@ start_host_slave(void *data) {
 //                else
 //                    compress2(comped_buf, &comped_len, comp_ptr, &comp_buf[0] - &comp_ptr[0], 0);
                 gettimeofday(&end_tv, NULL);
-                comp_time += (end_tv.tv_sec - start_tv.tv_sec) * 1000 + (end_tv.tv_usec - start_tv.tv_usec) / 1000;
-                comp_size += &comp_buf[0] - &comp_ptr[0];
-                comped_size += comped_len;
+                mcomp_time += (end_tv.tv_sec - start_tv.tv_sec) * 1000 + (end_tv.tv_usec - start_tv.tv_usec) / 1000;
+                mcomp_size += &comp_buf[0] - &comp_ptr[0];
+                mcomped_size += comped_len;
 //                DPRINTF("mem compressed: %d -> %d\n", &comp_buf[0] -&comp_ptr[0],  comped_len);
                 qemu_put_be32(f, comped_len);
 		qemu_put_be32(f,  &comp_buf[0] - &comp_ptr[0]);
@@ -368,7 +365,7 @@ start_host_slave(void *data) {
     if (s->compression){
         free(comp_buf);
         free(comped_buf);
-        DPRINTF("slave[%d] comp_time=%ld, ratio=%ld->%ld[%f]\n",s->id, comp_time, comped_size, comp_size, comped_size / (comp_size + 0.0));
+        DPRINTF("slave[%d] [M/D]comp_time=%ld/%ld, ratio=%ld/%ld->%ld/%ld[%f/%f]\n",s->id, mcomp_time, dcomp_time, mcomped_size, dcomped_size, mcomp_size, dcomp_size, mcomped_size / (mcomp_size + 0.0),  dcomped_size / (dcomp_size + 0.0));
     }
         
     DPRINTF("slave terminate\n");
