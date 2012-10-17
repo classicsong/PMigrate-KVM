@@ -1,3 +1,28 @@
-Read the documentation in qemu-doc.html.
+POpVM migration support for KVM
+branch v-two is the first stable version of POpVM-KVM
+branch compress-new is the stable version of POpVM-KVM with compression optimization support
 
-Fabrice Bellard.
+HOWTO use:
+To start a POpVM migration, we need to setup a migration config file:
+
+SSL_type=0
+h_ip=10.131.201.44:4444,10.131.201.46:5555,10.131.201.47:5777,10.131.201.48:5888
+d_ip=10.131.201.54:4444,10.131.201.56:5555,10.131.201.57:4777,10.131.201.58:4888
+ip_num=4
+slave_num=4
+max_iter=30
+max_factor=4
+max_downtime=200000000
+throughput=120
+compression=0
+
+The SSL_Type is set to NULL (only support NULL now)
+The SECOND line shows the host ip:port pairs in sending the data
+The THIRD line shows the destination ip:port pairs in receving migration data
+The FORTH line shows how many connection used in data transferring
+The FIFTH line shows how many consumer threads (slave threads) are used for data processing
+The SIX line shows the max number of iterations used in the migration (after 29 pre-copy iterations, the last iteration is forced to happen)
+The SEVENTH line shows the maximum number of memory data to be sent in the migration
+The EIGHTH line shows the maximum_domtime the migration can endure when the estimiated downtime is below max_downtime, the migration process will enter the last iteration
+The NINTH line shows the max network I/O throughput of each connection
+The TENTH line shows whether to compress data in migration (default is 0, for branch of compress-new, you can set it io 1)
