@@ -26,3 +26,5 @@ The SEVENTH line shows the maximum number of memory data to be sent in the migra
 The EIGHTH line shows the maximum_domtime the migration can endure when the estimiated downtime is below max_downtime, the migration process will enter the last iteration
 The NINTH line shows the max network I/O throughput of each connection
 The TENTH line shows whether to compress data in migration (default is 0, for branch of compress-new, you can set it io 1)
+
+The migration command in the QEMU Console is similar to the vanilla one, and there is no need to set migrate_max_speed and migrate_max_downtime as will be loaded from the config file.
