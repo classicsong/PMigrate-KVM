@@ -1,9 +1,9 @@
-POpVM migration support for KVM
-branch v-two is the first stable version of POpVM-KVM
-branch compress-new is the stable version of POpVM-KVM with compression optimization support
+Parallel migration support for KVM
+branch v-two is the first stable version of PMigrate-KVM
+branch compress-new is the stable version of PMigrate-KVM with compression optimization support
 
 HOWTO use:
-To start a POpVM migration, we need to setup a migration config file:
+To start a live migration migration, we need to setup a migration config file:
 
 SSL_type=0
 h_ip=10.131.201.44:4444,10.131.201.46:5555,10.131.201.47:5777,10.131.201.48:5888
